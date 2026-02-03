@@ -10,11 +10,12 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    telegram_id = Column(BigInteger, unique=True, nullable=False)
+    telegram_id = Column(BigInteger, unique=True, nullable=True)
     telegram_username = Column(String, nullable=True)
     full_name = Column(String, nullable=False)
-    rank = Column(String, nullable=True)
+    rank = Column(String, nullable=False)
     role = Column(String, nullable=False)
+    is_admin = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
