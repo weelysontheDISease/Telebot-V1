@@ -7,6 +7,8 @@ db = SessionLocal()
 
 # ---------- Users ----------
 
+db = SessionLocal()
+
 def get_user_by_telegram_id(telegram_id: int):
     return db.query(User).filter(User.telegram_id == telegram_id).first()
 
