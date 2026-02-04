@@ -47,3 +47,38 @@ class MovementLog(Base):
 
     created_by = Column(Integer, nullable=False)  # telegram_id
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+class MedicalEvent(Base):
+    __tablename__ = "medical_events"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)  # telegram_id
+
+    event_type = Column(String, nullable=False) # MA / RSI / RSO
+    appointment_type = Column(String)
+    location = Column(String)
+
+    symptoms = Column(Text)
+    diagnosis = Column(Text)
+
+    endorsed_by = Column(String)
+
+    start_datetime = Column(DateTime, nullable=False)
+    end_datetime = Column(DateTime)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+class MedicalStatus(Base):
+    __tablename__ = "medical_statuses"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+
+    status_type = Column(String, nullable=False)  # MC / LD / EUL
+    description = Column(String, nullable=False)
+
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+
+    source_event_id = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
