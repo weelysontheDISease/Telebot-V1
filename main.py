@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import pytz
 from datetime import time
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
@@ -17,6 +18,29 @@ from bot.callbacks import (
     confirm_send,
     cancel_send,
     force_remove_confirm
+=======
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    Filters,
+)
+
+from config.settings import BOT_TOKEN
+from config.constants import IC_GROUP_CHAT_ID
+
+from bot.cet import cet_handler
+from bot.commands import (
+    start_sft,
+    start_movement,
+    start_status,
+    start_parade_state,
+)
+from bot.callbacks import (
+    callback_router,
+    text_input_router,
+>>>>>>> Stashed changes
 )
 from services.db_service import DatabaseService
 from utils.time_utils import daily_reset
@@ -63,6 +87,44 @@ def main():
     setup_handlers(updater.dispatcher)
     setup_jobs(updater.job_queue)
 
+<<<<<<< Updated upstream
+=======
+    # -----------------------------
+    # Command Handlers
+    # -----------------------------
+    dispatcher.add_handler(CommandHandler("start_sft", start_sft))
+    dispatcher.add_handler(CommandHandler("start_movement", start_movement))
+    dispatcher.add_handler(CommandHandler("start_status", start_status))
+    dispatcher.add_handler(CommandHandler("start_paradestate", start_parade_state))
+
+    # -----------------------------
+    # CET AUTO-FORWARD (Instructor Chat)
+    # Must be BEFORE generic text handler
+    # -----------------------------
+    dispatcher.add_handler(
+        MessageHandler(
+            Filters.chat(IC_GROUP_CHAT_ID) & Filters.text,
+            cet_handler
+        )
+    )
+
+    # -----------------------------
+    # Callback Handlers (Buttons)
+    # -----------------------------
+    dispatcher.add_handler(CallbackQueryHandler(callback_router))
+
+    # -----------------------------
+    # Text Input Handler
+    # (Used for manual time, remarks, etc.)
+    # -----------------------------
+    dispatcher.add_handler(
+        MessageHandler(Filters.text & ~Filters.command, text_input_router)
+    )
+
+    # -----------------------------
+    # Start Bot
+    # -----------------------------
+>>>>>>> Stashed changes
     updater.start_polling()
     updater.idle()
 
