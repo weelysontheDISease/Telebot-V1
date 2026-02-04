@@ -1,10 +1,13 @@
 from datetime import date, datetime
 from sqlalchemy.orm import Session
+from db.database import SessionLocal
 from db.models import MedicalEvent, MedicalStatus, User
+
+db = SessionLocal()
 
 # ---------- Users ----------
 
-def get_user_by_telegram_id(db: Session, telegram_id: int):
+def get_user_by_telegram_id(telegram_id: int):
     return db.query(User).filter(User.telegram_id == telegram_id).first()
 
 def _normalize_username(value: str | None):
@@ -19,7 +22,6 @@ def _normalize_username(value: str | None):
 
 
 def create_user(
-    db: Session,
     full_name: str,
     rank: str,
     role: str,
@@ -58,7 +60,6 @@ def create_user(
 # ---------- Medical ----------
 
 def create_medical_event(
-    db: Session,
     user_id: int,
     event_type: str,
     symptoms: str,
@@ -77,7 +78,6 @@ def create_medical_event(
     return event
 
 def create_medical_status(
-    db: Session,
     user_id: int,
     status_type: str,
     description: str,
@@ -96,7 +96,7 @@ def create_medical_status(
     db.refresh(status)
     return status
 
-def get_active_statuses(db: Session, target_date: date):
+def get_active_statuses(target_date: date):
     """Retrieve all medical statuses active on the target_date."""
     return db.query(MedicalStatus).filter(
         MedicalStatus.start_date <= target_date,
