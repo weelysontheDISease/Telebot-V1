@@ -1,6 +1,15 @@
 from datetime import datetime
+from db import crud
 
 def parade_state(update, context):
+total_strength = 22  # Modify if total strength changes
+
+def retrieve_medical_events():
+	current_time = datetime.now()
+	medical_events = crud.get_medical_event(current_time)
+
+	return medical_events
+
 	"""Generates the current parade state"""
 	current_datetime = datetime.now()
 	current_time = current_datetime.time().strftime('%H%M')
