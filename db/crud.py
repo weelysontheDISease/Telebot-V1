@@ -1,5 +1,6 @@
 from db.database import SessionLocal
 from db.models import MedicalEvent, MedicalStatus, User, MovementLog
+
 db = SessionLocal()
 
 def get_user_by_telegram_id(telegram_id: int):
