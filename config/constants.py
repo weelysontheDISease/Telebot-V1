@@ -11,6 +11,7 @@ SFT_TOPIC_ID = 7
 PARADE_STATE_TOPIC_ID = 3
 CET_TOPIC_ID = 2
 
+
 # =========================
 # CADET CHAT (CET)
 # =========================
@@ -22,6 +23,7 @@ CADET_CET_TOPIC_ID = 5
 # =========================
 # MOVEMENT CONFIG
 # =========================
+
 
 LOCATIONS = [
     "DHA",
@@ -130,7 +132,20 @@ PARADE_STATE_SEPARATOR = "-" * 56
 # CET CONFIG
 # =========================
 
-# Optional keywords for CET filtering (future-proofing)
-CET_KEYWORDS = [
-    "CET"
-]
+# Keywords for CET filtering (future-proofing)
+CET_KEYWORDS = "Pre-MDST CET for "
+
+
+
+# =========================
+# DAILY MESSAG CONFIG
+# =========================
+
+# Daily messages to be sent on respective days
+DAILY_MSGS = {
+    "Monday" : "<b>Monday - MINDEF/SAF Mission</b> \nThe mission of MINDEF/SAF is to enhance Singapore's peace and security through deterrence and diplomacy, and should these fail, to secure a swift and decisive victory over the aggressor.",
+    "Tuesday" : "<b>Tuesday - DIS Mission</b> \nThe DIS will defend and dominate in the digital domain. As part of an integrated SAF, the DIS will enhance Singapore's security, from peace to war.",
+    "Wednesday" : "<b>Wednesday - Definition of SAF Leadership</b> \nLeadership is defined as the process of Influencing people to accomplish the mission, Inspiring their commitment, and Improving the organisation. ",
+    "Thursday" : "<b>Thursday - DIS Safety Messages</b>\n1. Safety is an Integral part of mission success.\n2. Zero accident is an achievable goal.\n3. Safety is an individual, team and command responsibility.",
+    "Friday" :  "<b>Friday - MINDEF/SAF Mission</b> \nThe mission of MINDEF/SAF is to enhance Singapore's peace and security through deterrence and diplomacy, and should these fail, to secure a swift and decisive victory over the aggressor."
+}

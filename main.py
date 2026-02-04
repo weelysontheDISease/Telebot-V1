@@ -21,6 +21,10 @@ from bot.callbacks import (
 )
 from services.db_service import DatabaseService
 
+from utils.time_utils import SG_TZ, DAILY_MSG_TIME
+
+from bot.daily_msg import send_daily_msg
+
 
 def main():
     """
@@ -50,6 +54,8 @@ def main():
     dispatcher.add_handler(CommandHandler("start_cet", start_cet))
     dispatcher.add_handler(CommandHandler("start_status", start_status))
     dispatcher.add_handler(CommandHandler("start_paradestate", start_parade_state))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, cet_handler))
+
 
     # -----------------------------
     # Callback Handlers (Buttons)
@@ -62,6 +68,15 @@ def main():
     # -----------------------------
     dispatcher.add_handler(
         MessageHandler(Filters.text & ~Filters.command, text_input_router)
+    )
+
+    # -----------------------------
+    # Sechdule Jobs
+    # -----------------------------
+    updater.job_queue.scheduler.timezone = SG_TZ
+    updater.job_queue.run_daily(
+        send_daily_msg,
+        time = DAILY_MSG_TIME
     )
 
     # -----------------------------
