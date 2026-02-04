@@ -17,6 +17,12 @@ def create_medical_event(db, user_id, event_type, **kwargs):
     db.refresh(event)
     return event
 
+def get_medical_event(db, today):
+    return db.query(MedicalEvent).filter(
+        MedicalEvent.start_datetime <= today,
+        MedicalEvent.end_datetime >= today
+    ).all()
+
 def get_active_statuses(db, today):
     return db.query(MedicalStatus).filter(
         MedicalStatus.start_date <= today,
