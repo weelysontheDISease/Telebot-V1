@@ -29,6 +29,7 @@ def setup_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler("generate", generate_sft))
     dispatcher.add_handler(CommandHandler("force_remove", force_remove))
     dispatcher.add_handler(CommandHandler("debug_ids", debug_ids))
+    dispatcher.add_handler(CommandHandler("parade_state", parade_state))
 
     dispatcher.add_handler(
         CallbackQueryHandler(menu_handler, pattern="^menu_")
