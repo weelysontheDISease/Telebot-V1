@@ -20,7 +20,7 @@ from bot.callbacks import (
 )
 from services.db_service import DatabaseService
 from utils.time_utils import daily_reset
-
+from bot.parade_state import generate_parade_state
 
 def setup_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler("start", main_menu))
@@ -29,7 +29,7 @@ def setup_handlers(dispatcher):
     dispatcher.add_handler(CommandHandler("generate", generate_sft))
     dispatcher.add_handler(CommandHandler("force_remove", force_remove))
     dispatcher.add_handler(CommandHandler("debug_ids", debug_ids))
-    dispatcher.add_handler(CommandHandler("parade_state", parade_state))
+    dispatcher.add_handler(CommandHandler("parade_state", generate_parade_state))
 
     dispatcher.add_handler(
         CallbackQueryHandler(menu_handler, pattern="^menu_")
