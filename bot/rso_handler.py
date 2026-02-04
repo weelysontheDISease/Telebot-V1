@@ -10,19 +10,21 @@ from config.constants import NAMES
 
 from db.crud import get_user_records, update_user_record, create_user_record
 
-def reply(update, text, reply_markup=None, parse_mode=None):  # Reusable reply function, change to put in ultils if needed elsewhere
-    if update.message:
-        update.message.reply_text(
-            text,
-            reply_markup=reply_markup,
-            parse_mode=parse_mode
-        )
-    else:
-        update.callback_query.edit_message_text(
-            text,
-            reply_markup=reply_markup,
-            parse_mode=parse_mode
-        )
+from helpers import reply
+
+# def reply(update, text, reply_markup=None, parse_mode=None):  # Reusable reply function, change to put in ultils if needed elsewhere
+#     if update.message:
+#         update.message.reply_text(
+#             text,
+#             reply_markup=reply_markup,
+#             parse_mode=parse_mode
+#         )
+#     else:
+#         update.callback_query.edit_message_text(
+#             text,
+#             reply_markup=reply_markup,
+#             parse_mode=parse_mode
+#         )
 
 
 # def get_records(database_service, name):
