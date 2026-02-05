@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import BigInteger, Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey
+from sqlalchemy import BigInteger, Column, Integer, String, Boolean, Date, DateTime, Time, Text, ForeignKey
 from datetime import datetime
 from sqlalchemy.orm import relationship
 
@@ -67,8 +67,8 @@ class MedicalEvent(Base):
 
     endorsed_by = Column(String)
 
-    start_datetime = Column(DateTime, nullable=False)
-    end_datetime = Column(DateTime)
+    event_date = Column(Date, nullable=False)
+    event_time = Column(Time, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     

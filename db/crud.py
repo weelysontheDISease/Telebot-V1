@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from db.models import MedicalEvent, MedicalStatus, User
@@ -65,14 +65,21 @@ def create_medical_event(
     user_id: int,
     event_type: str,
     symptoms: str,
-    diagnosis: str
+    diagnosis: str,
+    event_date: date | None = None,
+    event_time: time | None = None,
 ):
+    if event_date is None or event_time is None:
+        now = datetime.now()
+        event_date = event_date or now.date()
+        event_time = event_time or now.time().replace(microsecond=0)
     event = MedicalEvent(
         user_id=user_id,
         event_type=event_type,
         symptoms=symptoms,
         diagnosis=diagnosis,
-        start_datetime=datetime.now()
+        event_date=event_date,
+        event_time=event_time,
     )
     db.add(event)
     db.commit()
