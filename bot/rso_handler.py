@@ -104,21 +104,30 @@ def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_diagnosis"):
             context.user_data['diagnosis'] = user_input.upper()
             context.user_data['awaiting_diagnosis'] = False
-            context.user_data['awaiting_status'] = True
+            context.user_data['awaiting_mc_days'] = True
             reply(
                 update,
-                f"Diagnosis updated to: '{user_input.upper()}'\n\nNow, please enter your medical status :"
+                f"Diagnosis updated to: '{user_input.upper()}'"
             )
+            show_mc_days_buttons(update, context)
             return
 
-        if context.user_data.get("awaiting_status"):
-            context.user_data['status'] = user_input.upper()
-            context.user_data['awaiting_status'] = False
-            reply(
-                update,
-                f"Status updated to: '{user_input.upper()}'"
-            )
-            show_preview_summary(update, context)
+        if context.user_data.get("awaiting_custom_mc_days"):
+            # Validate that input is a number
+            try:
+                mc_days = int(user_input)
+                context.user_data['status'] = f"{mc_days} day(s) of MC"
+                context.user_data['awaiting_custom_mc_days'] = False
+                reply(
+                    update,
+                    f"Status updated to: '{context.user_data['status']}'"
+                )
+                show_preview_summary(update, context)
+            except ValueError:
+                reply(
+                    update,
+                    "Please enter a valid number for MC days."
+                )
             return
 
 
@@ -179,12 +188,53 @@ def update_input_handler(update: Update, context: CallbackContext):
         return
 
     context.user_data['diagnosis'] = user_input.upper()
-    context.user_data['awaiting_status'] = True
+    context.user_data['awaiting_mc_days'] = True
 
     reply(
         update,
-        f"Diagnosis updated to: '{user_input.upper()}'\n\nNow, please enter your medical status :"
+        f"Diagnosis updated to: '{user_input.upper()}'"
     )
+    show_mc_days_buttons(update, context)
+
+
+def show_mc_days_buttons(update: Update, context: CallbackContext):
+    """Show buttons for selecting MC days"""
+    keyboard = [
+        [InlineKeyboardButton("1 day", callback_data="mc_days|1")],
+        [InlineKeyboardButton("2 days", callback_data="mc_days|2")],
+        [InlineKeyboardButton("3 days", callback_data="mc_days|3")],
+        [InlineKeyboardButton("4 days", callback_data="mc_days|4")],
+        [InlineKeyboardButton("5 days", callback_data="mc_days|5")],
+        [InlineKeyboardButton("Other", callback_data="mc_days|other")]
+    ]
+    reply(
+        update,
+        "How many days of MC have you gotten?",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+def mc_days_button_handler(update: Update, context: CallbackContext):
+    """Handle MC days selection"""
+    query = update.callback_query
+    query.answer()
+
+    _, days = query.data.split("|")
+
+    if days == "other":
+        context.user_data['awaiting_custom_mc_days'] = True
+        reply(
+            update,
+            "Enter the number of MC days:"
+        )
+    else:
+        context.user_data['status'] = f"{days} day(s) MC"
+        context.user_data['awaiting_mc_days'] = False
+        reply(
+            update,
+            f"Status updated to: '{context.user_data['status']}'"
+        )
+        show_preview_summary(update, context)
 
 
 def show_preview_summary(update: Update, context: CallbackContext):
