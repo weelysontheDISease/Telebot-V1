@@ -111,3 +111,21 @@ def get_active_statuses(target_date: date):
         MedicalStatus.start_date <= target_date,
         MedicalStatus.end_date >= target_date
     ).all()
+
+def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
+    """Delete medical statuses/events before target_date. Returns (statuses, events)."""
+    session = SessionLocal()
+    try:
+        statuses_deleted = session.query(MedicalStatus).filter(
+            MedicalStatus.end_date < target_date
+        ).delete(synchronize_session=False)
+        events_deleted = session.query(MedicalEvent).filter(
+            MedicalEvent.event_date < target_date
+        ).delete(synchronize_session=False)
+        session.commit()
+        return statuses_deleted, events_deleted
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
