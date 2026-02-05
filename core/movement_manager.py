@@ -2,12 +2,10 @@ from datetime import datetime
 import pytz
 import re
 
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 from bot.helpers import reply
-from config.constants import (
-    IC_GROUP_CHAT_ID,
-    MOVEMENT_TOPIC_ID,
-    LOCATIONS
-)
+from config.constants import IC_GROUP_CHAT_ID, MOVEMENT_TOPIC_ID, LOCATIONS
 
 SG_TZ = pytz.timezone("Asia/Singapore")
 
@@ -104,6 +102,10 @@ def handle_movement_callback(update, context):
         else:
             context.user_data["awaiting_time"] = True
             reply(update, "Enter time in HHMM (24h):")
+    elif data == "move_confirm":
+        handle_movement_confirm(update, context)
+    elif data == "move_cancel":
+        reply(update, "❌ Movement report cancelled.")
 
 
 def handle_manual_time(update, context):
