@@ -13,22 +13,44 @@ from services.db_service import DatabaseService
 
 
 def setup_handlers(dispatcher):
+    # -----------------------------
+    # Command Handlers
+    # -----------------------------
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("start_sft", start_sft))
     dispatcher.add_handler(CommandHandler("start_movement", start_movement))
 
+    # -----------------------------
+    # Callback Handlers (Inline Buttons)
+    # -----------------------------
     dispatcher.add_handler(CallbackQueryHandler(callback_router))
+
+    # -----------------------------
+    # Text Input Handler
+    # (Used for manual time entry, etc.)
+    # -----------------------------
     dispatcher.add_handler(
         MessageHandler(Filters.text & ~Filters.command, text_input_router)
     )
 
 
 def main():
+    # -----------------------------
+    # Initialise Services
+    # -----------------------------
     DatabaseService.initialise()
 
+    # -----------------------------
+    # Initialise Bot
+    # -----------------------------
     updater = Updater(token=BOT_TOKEN, use_context=True)
-    setup_handlers(updater.dispatcher)
+    dispatcher = updater.dispatcher
 
+    setup_handlers(dispatcher)
+
+    # -----------------------------
+    # Start Bot
+    # -----------------------------
     updater.start_polling()
     updater.idle()
 
