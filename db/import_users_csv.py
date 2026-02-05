@@ -46,7 +46,7 @@ def _normalize_username(value):
         name = name[1:]
     return name or None
 
-def import_users(path):
+def import_users(path, require_username=False):
     session = SessionLocal()
     try:
         with open(path, newline="", encoding="utf-8") as f:
@@ -56,6 +56,8 @@ def import_users(path):
                 raise ValueError(f"Missing columns: {REQUIRED - header_fields}")
             if "telegram_id" not in header_fields and "telegram_username" not in header_fields:
                 raise ValueError("CSV must include telegram_id or telegram_username column")
+            if require_username and "telegram_username" not in header_fields:
+                raise ValueError("CSV must include telegram_username column")
 
             for row in reader:
                 telegram_id_raw = (row.get("telegram_id") or "").strip()
@@ -69,6 +71,8 @@ def import_users(path):
                 telegram_username = _normalize_username(row.get("telegram_username"))
                 if telegram_id is None and not telegram_username:
                     raise ValueError("Each row must include telegram_id or telegram_username")
+                if require_username and not telegram_username:
+                    raise ValueError("Each row must include telegram_username")
 
                 full_name = (row.get("full_name") or "").strip()
                 if not _require_full_caps(full_name):
