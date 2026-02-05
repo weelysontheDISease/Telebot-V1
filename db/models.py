@@ -54,7 +54,7 @@ class MedicalEvent(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, nullable=False)  # telegram_id
 
-    event_type = Column(String, nullable=False) # MA / RSI / RSO
+    event_type = Column(String, nullable=False) # MA / RSI / RSO / MC
     appointment_type = Column(String)
     location = Column(String)
 
