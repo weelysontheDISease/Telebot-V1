@@ -1,6 +1,7 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import BigInteger, Column, Integer, String, Boolean, Date, DateTime, Text
+from sqlalchemy import BigInteger, Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 class Base(DeclarativeBase):
     pass
@@ -22,6 +23,9 @@ class User(Base):
     updated_at = Column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+    
+    medical_statuses = relationship("MedicalStatus", back_populates="user")
+    medical_events = relationship("MedicalEvent", back_populates="user")
     
 # class Cadet(Base):
 #     __tablename__ = 'cadets'
@@ -52,7 +56,7 @@ class MedicalEvent(Base):
     __tablename__ = "medical_events"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)  # telegram_id
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     event_type = Column(String, nullable=False) # MA / RSI / RSO
     appointment_type = Column(String)
@@ -68,11 +72,13 @@ class MedicalEvent(Base):
 
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    user = relationship("User", back_populates="medical_events")
+    
 class MedicalStatus(Base):
     __tablename__ = "medical_statuses"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     status_type = Column(String, nullable=False)  # MC / LD / EUL
     description = Column(String, nullable=False)
@@ -82,3 +88,5 @@ class MedicalStatus(Base):
 
     source_event_id = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    user = relationship("User", back_populates="medical_statuses")
