@@ -1,9 +1,9 @@
 import pytz
-from datetime import datetime
+from datetime import datetime, time
 import re
 
 SG_TZ = pytz.timezone("Asia/Singapore")
-DAILY_MSG_TIME = datetime(hour=8, minute=0)
+DAILY_MSG_TIME = time(hour=8, minute=0)
 
 
 def today_sg() -> str:
