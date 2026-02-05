@@ -18,10 +18,15 @@ def create_medical_event(user_id, event_type, **kwargs):
     db.refresh(event)
     return event
 
-def get_medical_event(today):
-    return db.query(MedicalEvent).filter(
-        MedicalEvent.start_datetime <= today,
-        MedicalEvent.end_datetime >= today
+def get_medical_events(today):
+    return db.query(
+        MedicalEvent,
+        User
+	).join(
+		User, MedicalEvent.user_id == User.id
+	).filter(
+	MedicalEvent.start_datetime <= today,
+	MedicalEvent.end_datetime >= today
     ).all()
 
 def get_active_statuses(today):
@@ -29,3 +34,8 @@ def get_active_statuses(today):
         MedicalStatus.start_date <= today,
         MedicalStatus.end_date >= today
     ).all()
+
+def get_all_cadets():
+    return db.query(User).filter(
+        User.role == "Cadet"
+	).all()
