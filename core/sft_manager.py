@@ -1,14 +1,12 @@
 from datetime import datetime
 import pytz
 
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 from bot.helpers import reply
 from services.user_service import UserService
 from services.db_service import SFTService
-from config.constants import (
-    IC_GROUP_CHAT_ID,
-    SFT_TOPIC_ID,
-    SFT_ACTIVITIES
-)
+from config.constants import IC_GROUP_CHAT_ID, SFT_TOPIC_ID, SFT_ACTIVITIES
 
 SG_TZ = pytz.timezone("Asia/Singapore")
 
@@ -61,10 +59,11 @@ def handle_sft_callback(update, context):
     elif data.startswith("sft_end|"):
         context.user_data["end"] = data.split("|")[1]
 
-        user = UserService.require_user(update.effective_user.id)
+        user = UserService.require_user(update.effective_user)
 
         SFTService.add_submission(
             user_id=user.telegram_id,
+            user_name=user.full_name,
             activity=context.user_data["activity"],
             location=context.user_data["location"],
             start=context.user_data["start"],
