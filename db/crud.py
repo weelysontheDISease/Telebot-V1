@@ -114,14 +114,27 @@ def get_active_statuses(target_date: date):
 
 # ---------- Medical Events ----------
 
+# RSO Records
+
 def get_user_records(name: str):
     return db.query(MedicalEvent).join(User).filter(User.full_name == name,MedicalEvent.event_type == "RSO").all()
 
-def update_user_record(record_id: int, symptoms: str, diagnosis: str):
+def update_user_record(record_id: int, symptoms: str, diagnosis: str,status: str, start_date: str, end_date: str):
     record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
     if record:
         record.symptoms = symptoms
         record.diagnosis = diagnosis
+        record.status = status
+        #Add Status start_date and end_date to MedicalStatus Table, with reference to MedicalEvent ID
+        medical_status = MedicalStatus(
+            user_id=record.user_id,
+            status_type="MC",
+            description=status,
+            start_date=datetime.strptime(start_date, "%d%m%y").date(),
+            end_date=datetime.strptime(end_date, "%d%m%y").date(),
+            source_event_id=record.id
+        )
+        db.add(medical_status)
         db.commit()
         db.refresh(record)
     return record
@@ -147,6 +160,8 @@ def create_user_record(
     db.commit()
     db.refresh(event)
     return event
+
+# MA Records
 
 def get_ma_records(name: str):
     return db.query(MedicalEvent).join(User).filter(User.full_name == name,MedicalEvent.event_type == "MA").all()
@@ -191,6 +206,61 @@ def update_ma_record(
         record.event_time = datetime.strptime(appointment_time, "%H%M").time()
         if instructor:
             record.endorsed_by = instructor
+        db.commit()
+        db.refresh(record)
+    return record
+
+# RSI Records
+def get_user_rsi_records(name: str):
+    return db.query(MedicalEvent).join(User).filter(
+        User.full_name == name,
+        MedicalEvent.event_type == "RSI"
+    ).all()
+
+def create_rsi_record(
+    name: str,
+    symptoms: str,
+    diagnosis: str | None = None
+):
+    user = db.query(User).filter(User.full_name == name).first()
+    if not user:
+        raise ValueError("User not found")
+
+    now = datetime.now()
+    event = MedicalEvent(
+        user_id=user.id,
+        event_type="RSI",
+        symptoms=symptoms,
+        diagnosis=diagnosis or "",
+        event_date=now.date(),
+        event_time=now.time().replace(microsecond=0)
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+def update_rsi_record(
+    record_id: int,
+    diagnosis: str,
+    status_type: str,
+    status: str,
+    start_date: str,
+    end_date: str
+):
+    record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
+    if record:
+        record.diagnosis = diagnosis
+
+        medical_status = MedicalStatus(
+            user_id=record.user_id,
+            status_type=status_type,
+            description=status,
+            start_date=datetime.strptime(start_date, "%d%m%y").date(),
+            end_date=datetime.strptime(end_date, "%d%m%y").date(),
+            source_event_id=record.id
+        )
+        db.add(medical_status)
         db.commit()
         db.refresh(record)
     return record

@@ -17,7 +17,8 @@ from bot.commands import (
 )
 from bot.callbacks import (
     callback_router,
-    text_input_router
+    text_input_router,
+    register_status_handlers
 )
 
 from config.settings import BOT_TOKEN
@@ -59,6 +60,8 @@ def main():
     dispatcher.add_handler(CommandHandler("start_status", start_status))
     dispatcher.add_handler(CommandHandler("start_paradestate", start_parade_state))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, cet_handler))
+
+    register_status_handlers(dispatcher)
 
 
     # -----------------------------
