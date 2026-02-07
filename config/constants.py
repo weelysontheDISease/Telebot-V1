@@ -1,3 +1,5 @@
+import os
+
 # =========================
 # CHAT & TOPIC IDS
 # =========================
@@ -5,16 +7,20 @@
 # Instructors / IC Group (shared)
 IC_GROUP_CHAT_ID = -1003592356953
 
+# Admin user IDs (comma-separated) for restricted actions
+ADMIN_IDS = [
+    int(admin_id)
+    for admin_id in os.getenv("ADMIN_IDS", "").split(",")
+    if admin_id.strip()
+]
+
 # Topics in IC Group
 MOVEMENT_TOPIC_ID = 322
 SFT_TOPIC_ID = 7
 PARADE_STATE_TOPIC_ID = 3
 CET_TOPIC_ID = 2
 
-
-# =========================
-# CADET CHAT (CET)
-# =========================
+# Cadet Chat (CET)
 
 CADET_CHAT_ID = -1003675767444
 CADET_CET_TOPIC_ID = 5
@@ -23,7 +29,6 @@ CADET_CET_TOPIC_ID = 5
 # =========================
 # MOVEMENT CONFIG
 # =========================
-
 
 LOCATIONS = [
     "DHA",
@@ -132,10 +137,10 @@ PARADE_STATE_SEPARATOR = "-" * 56
 # CET CONFIG
 # =========================
 
-# Keywords for CET filtering (future-proofing)
-CET_KEYWORDS = "Pre-MDST CET for "
-
-
+# Optional keywords for CET filtering (future-proofing)
+CET_KEYWORDS = [
+    "CET"
+]
 
 # =========================
 # DAILY MESSAG CONFIG
