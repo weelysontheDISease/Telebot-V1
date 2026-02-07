@@ -12,19 +12,7 @@ from telegram.ext import (
 )
 
 from config.settings import BOT_TOKEN
-from bot.commands import (
-    start_sft,
-    start_movement,
-    start_cet,
-    start_status,
-    start_parade_state
-)
-from bot.callbacks import (
-    callback_router,
-    text_input_router
-)
-
-from config.settings import BOT_TOKEN
+from bot.commands import start_sft, start_movement
 from bot.commands import start, start_sft, start_movement
 from bot.callbacks import callback_router, text_input_router
 from services.db_service import DatabaseService

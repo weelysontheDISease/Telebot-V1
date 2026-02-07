@@ -3,7 +3,7 @@ from bot.helpers import reply
 from core.report_manager import ReportManager
 from utils.time_utils import is_valid_24h_time
 from config.constants import (
-    GROUP_CHAT_ID,
+    IC_GROUP_CHAT_ID,
     SFT_TOPIC_ID,
     MOVEMENT_TOPIC_ID,
     ADMIN_IDS
@@ -22,6 +22,12 @@ def callback_router(update, context):
     elif mode == "SFT":
         handle_sft_callbacks(update, context)
 
+def text_input_router(update, context):
+    mode = context.user_data.get("mode")
+
+    if mode == "MOVEMENT":
+        movement_text_input(update, context)
+
 
 # =========================
 # MOVEMENT CALLBACKS
@@ -35,7 +41,7 @@ def handle_movement_callbacks(update, context):
         msg = context.user_data["final_message"]
 
         context.bot.send_message(
-            chat_id=GROUP_CHAT_ID,
+            chat_id=IC_GROUP_CHAT_ID,
             message_thread_id=MOVEMENT_TOPIC_ID,
             text=msg
         )
@@ -110,7 +116,7 @@ def handle_sft_callbacks(update, context):
         )
 
         context.bot.send_message(
-            chat_id=GROUP_CHAT_ID,
+            chat_id=IC_GROUP_CHAT_ID,
             message_thread_id=SFT_TOPIC_ID,
             text=msg
         )
