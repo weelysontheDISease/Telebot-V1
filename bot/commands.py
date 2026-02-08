@@ -1,5 +1,15 @@
 from bot.helpers import reply
 
+# =========================
+# START ENTRY POINT
+# =========================
+def start(update, context):
+    context.user_data.clear()
+    reply(
+        update,
+        "👋 Welcome.\n\n"
+        "Use /start_sft for SFT reporting or /start_movement for movement reporting."
+    )
 
 # =========================
 # SFT ENTRY POINT
@@ -12,7 +22,6 @@ def start_sft(update, context):
         "🏋️ SFT mode started.\n\n"
         "Use the menu to submit or manage SFT."
     )
-
 
 # =========================
 # MOVEMENT ENTRY POINT
