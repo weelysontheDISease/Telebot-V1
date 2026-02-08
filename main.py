@@ -1,6 +1,7 @@
 from config.settings import BOT_TOKEN
-from bot.commands import start_sft, start_movement
+from bot.commands import start, start_sft, start_movement
 from bot.callbacks import callback_router, text_input_router
+from bot.cet import cet_handler
 from services.db_service import DatabaseService
 
 from telegram.ext import (
@@ -10,12 +11,6 @@ from telegram.ext import (
     MessageHandler,
     Filters
 )
-
-from config.settings import BOT_TOKEN
-from bot.commands import start_sft, start_movement
-from bot.commands import start, start_sft, start_movement
-from bot.callbacks import callback_router, text_input_router
-from services.db_service import DatabaseService
 
 from utils.time_utils import SG_TZ, DAILY_MSG_TIME
 
