@@ -6,6 +6,7 @@ from bot.commands import (
     start,
     start_sft,
     start_movement,
+    start_status,
 )
 
 from bot.callbacks import (
