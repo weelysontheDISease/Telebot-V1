@@ -61,7 +61,7 @@ async def start_movement(update, context):
 # =========================
 # STATUS REPORTING MENU
 # =========================
-def start_status(update, context):
+async def start_status(update, context):
     """Main menu for RSO/MA/RSI reporting"""
     context.user_data.clear()
 
@@ -75,7 +75,7 @@ def start_status(update, context):
         [InlineKeyboardButton("❌ Cancel", callback_data="status_menu|cancel")]
     ]
 
-    reply(
+    await reply(
         update,
         "📊 *Status Reporting Menu*\n\n"
         "Select an option:",

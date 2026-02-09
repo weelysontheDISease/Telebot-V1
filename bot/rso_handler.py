@@ -1,11 +1,6 @@
 from datetime import datetime, timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    CallbackQueryHandler,
-    CallbackContext
-)
+from telegram.ext import CallbackContext
 
 
 
@@ -28,28 +23,28 @@ def make_name_keyboard(prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(keyboard)
 
 
-def prompt_name_selection(update: Update, context: CallbackContext, mode: str, prompt: str, prefix: str):
+async def prompt_name_selection(update: Update, context: CallbackContext, mode: str, prompt: str, prefix: str):
     set_mode(context, mode)
-    reply(update, prompt, reply_markup=make_name_keyboard(prefix))
+    await reply(update, prompt, reply_markup=make_name_keyboard(prefix))
 
 # ------------ Common Handlers for RSO, RSI and MA ------------ #
 
-def name_selection_handler(update: Update, context: CallbackContext):  # manual input for symptoms
+async def name_selection_handler(update: Update, context: CallbackContext):  # manual input for symptoms
     query = update.callback_query
-    query.answer()
+    await query.answer()
     key, name = query.data.split("|", 1)
 
     if key == "name" and context.user_data.get("mode") == "report":
         context.user_data["name"] = name
         context.user_data["symptoms"] = ""
         context.user_data["awaiting_symptoms"] = True
-        reply(update, f"Name selected: {name}. Describe your symptoms.")
+        await reply(update, f"Name selected: {name}. Describe your symptoms.")
         return
 
     if key == "name" and context.user_data.get("mode") == "ma_report":
         context.user_data["name"] = name
         context.user_data["awaiting_appointment"] = True
-        reply(
+        await reply(
             update,
             f"Name selected: {name}. Enter the name of your appointment. (E.g., Dental, Otolaryngology)"
         )
@@ -59,7 +54,7 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
         context.user_data["name"] = name
         context.user_data["symptoms"] = ""
         context.user_data["awaiting_rsi_symptoms"] = True
-        reply(update, f"Name selected: {name}. Describe your symptoms.")
+        await reply(update, f"Name selected: {name}. Describe your symptoms.")
         return
 
     if key == "update_name":
@@ -69,7 +64,7 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
 
         records = get_user_records(name)
         if not records:
-            reply(
+            await reply(
                 update,
                 f"No existing report found for {name}. Please use /report_rso to create a new report."
             )
@@ -81,14 +76,14 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
         context.user_data["diagnosis"] = getattr(latest_record, "diagnosis", "")
         context.user_data["status"] = getattr(latest_record, "status", "")
         context.user_data["record_id"] = getattr(latest_record, "id", None)
-        reply(update, f"Updating report for {name}. What is your diagnosis?")
+        await reply(update, f"Updating report for {name}. What is your diagnosis?")
         return
 
     if key == "update_ma_name":
         context.user_data["name"] = name
         user_records = get_ma_records(name)
         if not user_records:
-            reply(update, f"No existing MA reports found for {name}.")
+            await reply(update, f"No existing MA reports found for {name}.")
             context.user_data.clear()
             return
 
@@ -101,14 +96,14 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
 
         keyboard = [[InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
                     for instructor in instructor_list]
-        reply(update, "Select who endorsed:", reply_markup=InlineKeyboardMarkup(keyboard))
+        await reply(update, "Select who endorsed:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
     if key == "rsi_update_name":
         context.user_data["name"] = name
         records = get_user_rsi_records(name)
         if not records:
-            reply(update, f"No existing RSI report found for {name}.")
+            await reply(update, f"No existing RSI report found for {name}.")
             context.user_data.clear()
             return
 
@@ -116,7 +111,7 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
         context.user_data["record_id"] = getattr(latest_record, "id", None)
         context.user_data["symptoms"] = getattr(latest_record, "symptoms", "")
         context.user_data["awaiting_rsi_diagnosis"] = True
-        reply(update, f"Updating RSI report for {name}. What is your diagnosis?")
+        await reply(update, f"Updating RSI report for {name}. What is your diagnosis?")
         return
 
 async def manual_input_handler(update: Update, context: CallbackContext):
@@ -131,20 +126,20 @@ async def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_symptoms"):
             # Validate symptoms: not empty and reasonable length
             if len(user_input) < 3:
-                reply(update, "Symptoms must be at least 3 characters. Please try again.")
+                await reply(update, "Symptoms must be at least 3 characters. Please try again.")
                 return
             if len(user_input) > 200:
-                reply(update, "Symptoms too long (max 200 characters). Please be more concise.")
+                await reply(update, "Symptoms too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['symptoms'] += user_input.upper()
             context.user_data['awaiting_symptoms'] = False
             context.user_data['awaiting_diagnosis'] = True
-            reply(
+            await reply(
                 update,
                 f"Symptom recorded: {user_input.upper()}."
             )
-            show_preview_summary(update, context)
+            await show_preview_summary(update, context)
             return
 
     if context.user_data.get("mode") == "update":
@@ -152,11 +147,11 @@ async def manual_input_handler(update: Update, context: CallbackContext):
             context.user_data['diagnosis'] = user_input.upper()
             context.user_data['awaiting_diagnosis'] = False
             context.user_data['awaiting_mc_days'] = True
-            reply(
+            await reply(
                 update,
                 f"Diagnosis updated to: '{user_input.upper()}'"
             )
-            show_mc_days_buttons(update, context)
+            await show_mc_days_buttons(update, context)
             return
 
         if context.user_data.get("awaiting_custom_mc_days"):
@@ -164,10 +159,10 @@ async def manual_input_handler(update: Update, context: CallbackContext):
             try:
                 mc_days = int(user_input)
                 if mc_days <= 0:
-                    reply(update, "MC days must be a positive number. Please try again.")
+                    await reply(update, "MC days must be a positive number. Please try again.")
                     return
                 if mc_days > 365:
-                    reply(update, "MC days seems unreasonably long. Please enter a value less than 365.")
+                    await reply(update, "MC days seems unreasonably long. Please enter a value less than 365.")
                     return
 
                 if mc_days == 1:
@@ -176,13 +171,13 @@ async def manual_input_handler(update: Update, context: CallbackContext):
                     context.user_data['status'] = f"{mc_days} DAYS MC"
                 context.user_data['awaiting_custom_mc_days'] = False
                 context.user_data['number_of_mc_days'] = mc_days
-                reply(
+                await reply(
                     update,
                     f"Status updated to: '{context.user_data['status']}'"
                 )
-                show_preview_summary(update, context)
+                await show_preview_summary(update, context)
             except ValueError:
-                reply(
+                await reply(
                     update,
                     "Please enter a valid number for MC days."
                 )
@@ -192,16 +187,16 @@ async def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_appointment"):
             # Validate appointment: not empty and reasonable length
             if len(user_input) < 2:
-                reply(update, "Appointment type must be at least 2 characters. Please try again.")
+                await reply(update, "Appointment type must be at least 2 characters. Please try again.")
                 return
             if len(user_input) > 200:
-                reply(update, "Appointment type too long (max 200 characters). Please be more concise.")
+                await reply(update, "Appointment type too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['appointment'] = user_input.upper()
             context.user_data['awaiting_appointment'] = False
             context.user_data['awaiting_location'] = True
-            reply(
+            await reply(
                 update,
                 f"Appointment recorded: {user_input.upper()}.\n\nPlease enter the location of your appointment."
             )
@@ -210,16 +205,16 @@ async def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_location"):
             # Validate location: not empty and reasonable length
             if len(user_input) < 2:
-                reply(update, "Location must be at least 2 characters. Please try again.")
+                await reply(update, "Location must be at least 2 characters. Please try again.")
                 return
             if len(user_input) > 200:
-                reply(update, "Location too long (max 200 characters). Please be more concise.")
+                await reply(update, "Location too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['appointment_location'] = user_input.upper()
             context.user_data['awaiting_location'] = False
             context.user_data['awaiting_date'] = True
-            reply(
+            await reply(
                 update,
                 f"Location recorded: {user_input.upper()}.\n\nPlease enter your appointment date in DDMMYY format."
             )
@@ -228,7 +223,7 @@ async def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_date"):
             # Validate date: must be in DDMMYY format and valid
             if len(user_input) != 6 or not user_input.isdigit():
-                reply(update, "Date must be in DDMMYY format (6 digits). Please try again.")
+                await reply(update, "Date must be in DDMMYY format (6 digits). Please try again.")
                 return
 
             try:
@@ -238,10 +233,10 @@ async def manual_input_handler(update: Update, context: CallbackContext):
 
                 # Basic validation
                 if not (1 <= day <= 31):
-                    reply(update, "Invalid day. Please enter a valid date in DDMMYY format.")
+                    await reply(update, "Invalid day. Please enter a valid date in DDMMYY format.")
                     return
                 if not (1 <= month <= 12):
-                    reply(update, "Invalid month. Please enter a valid date in DDMMYY format.")
+                    await reply(update, "Invalid month. Please enter a valid date in DDMMYY format.")
                     return
 
                 # Try to parse the date to ensure it's valid
@@ -249,16 +244,16 @@ async def manual_input_handler(update: Update, context: CallbackContext):
 
                 # Check if date is in the past
                 if appointment_date < datetime.now().date():
-                    reply(update, "Appointment date cannot be in the past. Please enter a future date.")
+                    await reply(update, "Appointment date cannot be in the past. Please enter a future date.")
                     return
             except ValueError:
-                reply(update, "Invalid date. Please enter a valid date in DDMMYY format.")
+                await reply(update, "Invalid date. Please enter a valid date in DDMMYY format.")
                 return
 
             context.user_data['appointment_date'] = user_input.upper()
             context.user_data['awaiting_date'] = False
             context.user_data['awaiting_time'] = True
-            reply(
+            await reply(
                 update,
                 f"Appointment date recorded: {user_input.upper()}.\n\nPlease enter your appointment time in HHMM and 24H format."
             )
@@ -267,7 +262,7 @@ async def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_time"):
             # Validate time: must be in HHMM format (24-hour)
             if len(user_input) != 4 or not user_input.isdigit():
-                reply(update, "Time must be in HHMM format (4 digits, 24-hour). Please try again.")
+                await reply(update, "Time must be in HHMM format (4 digits, 24-hour). Please try again.")
                 return
 
             try:
@@ -275,81 +270,81 @@ async def manual_input_handler(update: Update, context: CallbackContext):
                 minutes = int(user_input[2:4])
 
                 if not (0 <= hours <= 23):
-                    reply(update, "Invalid hour (must be 00-23). Please enter a valid time in HHMM format.")
+                    await reply(update, "Invalid hour (must be 00-23). Please enter a valid time in HHMM format.")
                     return
                 if not (0 <= minutes <= 59):
-                    reply(update, "Invalid minutes (must be 00-59). Please enter a valid time in HHMM format.")
+                    await reply(update, "Invalid minutes (must be 00-59). Please enter a valid time in HHMM format.")
                     return
 
                 # Try to parse to ensure valid
                 datetime.strptime(user_input, "%H%M")
             except ValueError:
-                reply(update, "Invalid time. Please enter a valid time in HHMM format (24-hour).")
+                await reply(update, "Invalid time. Please enter a valid time in HHMM format (24-hour).")
                 return
 
             context.user_data['appointment_time'] = user_input.upper()
             context.user_data['awaiting_time'] = False
-            reply(
+            await reply(
                 update,
                 f"Appointment time recorded: {user_input.upper()}."
             )
-            show_ma_preview_summary(update, context)
+            await show_ma_preview_summary(update, context)
             return
 
     if context.user_data.get("mode") == "rsi_report":
         if context.user_data.get("awaiting_rsi_symptoms"):
             # Validate RSI symptoms: not empty and reasonable length
             if len(user_input) < 3:
-                reply(update, "Symptoms must be at least 3 characters. Please try again.")
+                await reply(update, "Symptoms must be at least 3 characters. Please try again.")
                 return
             if len(user_input) > 200:
-                reply(update, "Symptoms too long (max 200 characters). Please be more concise.")
+                await reply(update, "Symptoms too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['symptoms'] += user_input.upper()
             context.user_data['awaiting_rsi_symptoms'] = False
-            show_rsi_preview_summary(update, context, include_status=False)
+            await show_rsi_preview_summary(update, context, include_status=False)
             return
 
     if context.user_data.get("mode") == "rsi_update":
         if context.user_data.get("awaiting_rsi_diagnosis"):
             # Validate RSI diagnosis: not empty and reasonable length
             if len(user_input) < 2:
-                reply(update, "Diagnosis must be at least 2 characters. Please try again.")
+                await reply(update, "Diagnosis must be at least 2 characters. Please try again.")
                 return
             if len(user_input) > 200:
-                reply(update, "Diagnosis too long (max 200 characters). Please be more concise.")
+                await reply(update, "Diagnosis too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['diagnosis'] = user_input.upper()
             context.user_data['awaiting_rsi_diagnosis'] = False
-            show_rsi_days_buttons(update, context)
+            await show_rsi_days_buttons(update, context)
             return
 
         if context.user_data.get("awaiting_rsi_custom_days"):
             try:
                 days = int(user_input)
                 if days <= 0:
-                    reply(update, "Number of days must be a positive number. Please try again.")
+                    await reply(update, "Number of days must be a positive number. Please try again.")
                     return
                 if days > 365:
-                    reply(update, "Number of days seems unreasonably long. Please enter a value less than 365.")
+                    await reply(update, "Number of days seems unreasonably long. Please enter a value less than 365.")
                     return
 
                 context.user_data['number_of_days'] = days
                 context.user_data['awaiting_rsi_custom_days'] = False
-                show_rsi_status_type_buttons(update, context)
+                await show_rsi_status_type_buttons(update, context)
             except ValueError:
-                reply(update, "Please enter a valid number of days.")
+                await reply(update, "Please enter a valid number of days.")
             return
 
-def start_status_report(update: Update, context: CallbackContext):
-    prompt_name_selection(update, context, "report", "Select your name:", "name")
+async def start_status_report(update: Update, context: CallbackContext):
+    await prompt_name_selection(update, context, "report", "Select your name:", "name")
 
 # ------------ RSO Handlers and Functions ------------ #
-def start_update_status(update: Update, context: CallbackContext):
+async def start_update_status(update: Update, context: CallbackContext):
     """Start the update process - get user name to find their report"""
-    prompt_name_selection(
+    await prompt_name_selection(
         update,
         context,
         "update",
@@ -358,7 +353,7 @@ def start_update_status(update: Update, context: CallbackContext):
     )
 
 
-def show_mc_days_buttons(update: Update, context: CallbackContext):
+async def show_mc_days_buttons(update: Update, context: CallbackContext):
     """Show buttons for selecting MC days"""
     keyboard = [
         [InlineKeyboardButton("1 day", callback_data="mc_days|1")],
@@ -368,24 +363,24 @@ def show_mc_days_buttons(update: Update, context: CallbackContext):
         [InlineKeyboardButton("5 days", callback_data="mc_days|5")],
         [InlineKeyboardButton("Other", callback_data="mc_days|other")]
     ]
-    reply(
+    await reply(
         update,
         "How many days of MC have you gotten?",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-def mc_days_button_handler(update: Update, context: CallbackContext):
+async def mc_days_button_handler(update: Update, context: CallbackContext):
     """Handle MC days selection"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     _, days = query.data.split("|")
 
     if days == "other":
         context.user_data['awaiting_custom_mc_days'] = True
         context.user_data['number_of_mc_days'] = None
-        reply(
+        await reply(
             update,
             "Enter the number of MC days:"
         )
@@ -396,14 +391,14 @@ def mc_days_button_handler(update: Update, context: CallbackContext):
             context.user_data['status'] = f"{days} DAYS MC"
         context.user_data['number_of_mc_days'] = int(days)
         context.user_data['awaiting_mc_days'] = False
-        reply(
+        await reply(
             update,
             f"Status updated to: '{context.user_data['status']}'"
         )
-        show_preview_summary(update, context)
+        await show_mc_days_buttons(update, context)
 
 
-def show_preview_summary(update: Update, context: CallbackContext):
+async def show_preview_summary(update: Update, context: CallbackContext):
     name = context.user_data.get('name', 'N/A')
     symptoms = context.user_data.get('symptoms', '')
     diagnosis = context.user_data.get('diagnosis', '')
@@ -431,7 +426,7 @@ def show_preview_summary(update: Update, context: CallbackContext):
             InlineKeyboardButton("Cancel", callback_data="cancel")
         ]
     ]
-    reply(
+    await reply(
         update,
         summary,
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -439,11 +434,11 @@ def show_preview_summary(update: Update, context: CallbackContext):
     return
 
 
-def confirm_handler(update: Update, context: CallbackContext):
+async def confirm_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     if not query:
         return
-    query.answer()
+    await query.answer()
 
     name = context.user_data.get('name', 'N/A')
     symptoms = context.user_data.get('symptoms', '')
@@ -477,16 +472,16 @@ def confirm_handler(update: Update, context: CallbackContext):
 
         # Add logic to send update to IC Chat
 
-    reply(
+    await reply(
         update,
         "Report saved. Thank you!"
     )
     context.user_data.clear()
 
 
-def cancel(update: Update, context: CallbackContext):
+async def cancel(update: Update, context: CallbackContext):
     context.user_data.clear()
-    reply(update, "Cancelled.")
+    await reply(update, "Cancelled.")
 
 
 # def report_rso_command(update: Update, context: CallbackContext):
@@ -505,10 +500,10 @@ def cancel(update: Update, context: CallbackContext):
 
 # ------------ MA Handlers and Functions ------------ #
 
-def start_ma_report(update: Update, context: CallbackContext):
-    prompt_name_selection(update, context, "ma_report", "Select your name for MA report:", "name")
+async def start_ma_report(update: Update, context: CallbackContext):
+    await prompt_name_selection(update, context, "ma_report", "Select your name for MA report:", "name")
 
-def show_ma_preview_summary(update: Update, context: CallbackContext):
+async def show_ma_preview_summary(update: Update, context: CallbackContext):
     name = context.user_data.get('name', 'N/A')
     appointment = context.user_data.get('appointment', 'N/A')
     appointment_location = context.user_data.get('appointment_location', 'N/A')
@@ -527,18 +522,18 @@ def show_ma_preview_summary(update: Update, context: CallbackContext):
             InlineKeyboardButton("Cancel", callback_data="cancel")
         ]
     ]
-    reply(
+    await reply(
         update,
         summary,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
     return
 
-def confirm_ma_handler(update: Update, context: CallbackContext):
+async def confirm_ma_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     if not query:
         return
-    query.answer()
+    await query.answer()
 
     name = context.user_data.get('name', 'N/A')
     appointment = context.user_data.get('appointment', 'N/A')
@@ -555,7 +550,7 @@ def confirm_ma_handler(update: Update, context: CallbackContext):
         appointment_time=appointment_time
     )
 
-    reply(
+    await reply(
         update,
         "MA Report saved. Thank you!"
     )
@@ -563,22 +558,22 @@ def confirm_ma_handler(update: Update, context: CallbackContext):
 
 
 
-def update_endorsed(update: Update, context: CallbackContext):
+async def update_endorsed(update: Update, context: CallbackContext):
     """Start the update endorsed process - select name first"""
-    prompt_name_selection(update, context, "update_ma", "Select your name to update MA endorsement:", "update_ma_name")
+    await prompt_name_selection(update, context, "update_ma", "Select your name to update MA endorsement:", "update_ma_name")
 
-def instructor_selection_handler(update: Update, context: CallbackContext):
+async def instructor_selection_handler(update: Update, context: CallbackContext):
     query = update.callback_query
-    query.answer()
+    await query.answer()
     key, instructor = query.data.split("|")
     if key == "instructor":
         context.user_data['instructor'] = instructor
         # Proceed to next step, e.g., ask for symptoms
-        reply(
+        await reply(
             update,
             f"Instructor selected: {instructor}.\n\n"
         )
-        show_ma_update_summary(update, context)
+        await show_ma_update_summary(update, context)
         update_ma_record(
             record_id=context.user_data.get('record_id'),
             appointment=context.user_data.get('appointment', 'N/A'),
@@ -590,7 +585,7 @@ def instructor_selection_handler(update: Update, context: CallbackContext):
 
         return
 
-def show_ma_update_summary(update: Update, context: CallbackContext):
+async def show_ma_update_summary(update: Update, context: CallbackContext):
     name = context.user_data.get('name', 'N/A')
     appointment = context.user_data.get('appointment', 'N/A')
     appointment_location = context.user_data.get('appointment_location', 'N/A')
@@ -605,7 +600,7 @@ def show_ma_update_summary(update: Update, context: CallbackContext):
     summary += f"TIME OF APPOINTMENT: {appointment_time}H\n"
     summary += f"ENDORSED BY: {instructor}\n"
 
-    reply(
+    await reply(
         update,
         summary
     )
@@ -616,13 +611,13 @@ def show_ma_update_summary(update: Update, context: CallbackContext):
 
 # ------------ RSI Handlers and Functions ------------ #
 
-def start_rsi_report(update: Update, context: CallbackContext):
-    prompt_name_selection(update, context, "rsi_report", "Select your name to report RSI:", "rsi_name")
+async def start_rsi_report(update: Update, context: CallbackContext):
+    await prompt_name_selection(update, context, "rsi_report", "Select your name to report RSI:", "rsi_name")
 
-def start_update_rsi(update: Update, context: CallbackContext):
-    prompt_name_selection(update, context, "rsi_update", "Select your name to update RSI status:", "rsi_update_name")
+async def start_update_rsi(update: Update, context: CallbackContext):
+    await prompt_name_selection(update, context, "rsi_update", "Select your name to update RSI status:", "rsi_update_name")
 
-def show_rsi_days_buttons(update: Update, context: CallbackContext):
+async def show_rsi_days_buttons(update: Update, context: CallbackContext):
     keyboard = [
         [InlineKeyboardButton("1 day", callback_data="rsi_days|1")],
         [InlineKeyboardButton("2 days", callback_data="rsi_days|2")],
@@ -631,39 +626,39 @@ def show_rsi_days_buttons(update: Update, context: CallbackContext):
         [InlineKeyboardButton("5 days", callback_data="rsi_days|5")],
         [InlineKeyboardButton("Other", callback_data="rsi_days|other")]
     ]
-    reply(
+    await reply(
         update,
         "How many days?",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-def rsi_days_button_handler(update: Update, context: CallbackContext):
+async def rsi_days_button_handler(update: Update, context: CallbackContext):
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     _, days = query.data.split("|")
     if days == "other":
         context.user_data["awaiting_rsi_custom_days"] = True
-        reply(update, "Enter the number of days:")
+        await reply(update, "Enter the number of days:")
         return
 
     context.user_data["number_of_days"] = int(days)
-    show_rsi_status_type_buttons(update, context)
+    await show_rsi_status_type_buttons(update, context)
 
-def show_rsi_status_type_buttons(update: Update, context: CallbackContext):
+async def show_rsi_status_type_buttons(update: Update, context: CallbackContext):
     keyboard = [
         [InlineKeyboardButton("MC", callback_data="rsi_type|MC")],
         [InlineKeyboardButton("LD", callback_data="rsi_type|LD")]
     ]
-    reply(
+    await reply(
         update,
         "Select status type:",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-def rsi_status_type_handler(update: Update, context: CallbackContext):
+async def rsi_status_type_handler(update: Update, context: CallbackContext):
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     _, status_type = query.data.split("|")
     days = context.user_data.get("number_of_days", 1)
@@ -681,9 +676,9 @@ def rsi_status_type_handler(update: Update, context: CallbackContext):
     context.user_data["start_date"] = start_date
     context.user_data["end_date"] = end_date
 
-    show_rsi_preview_summary(update, context,include_status=True)
+    await show_rsi_preview_summary(update, context,include_status=True)
 
-def show_rsi_preview_summary(update: Update, context: CallbackContext, include_status: bool):
+async def show_rsi_preview_summary(update: Update, context: CallbackContext, include_status: bool):
     name = context.user_data.get("name", "N/A")
     symptoms = context.user_data.get("symptoms", '')
     diagnosis = context.user_data.get("diagnosis", "")
@@ -703,17 +698,17 @@ def show_rsi_preview_summary(update: Update, context: CallbackContext, include_s
     confirm_cb = "confirm_rsi_report" if context.user_data.get("mode") == "rsi_report" else "confirm_rsi_update"
     keyboard = [[InlineKeyboardButton("Confirm", callback_data=confirm_cb),
                  InlineKeyboardButton("Cancel", callback_data="cancel")]]
-    reply(
+    await reply(
         update,
         summary,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-def confirm_rsi_report_handler(update: Update, context: CallbackContext):
+async def confirm_rsi_report_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     if not query:
         return
-    query.answer()
+    await query.answer()
 
     name = context.user_data.get("name", "N/A")
     symptoms = context.user_data.get("symptoms", "")
@@ -723,14 +718,14 @@ def confirm_rsi_report_handler(update: Update, context: CallbackContext):
         symptoms=symptoms
     )
 
-    reply(update, "RSI report saved. Thank you!")
+    await reply(update, "RSI report saved. Thank you!")
     context.user_data.clear()
 
-def confirm_rsi_update_handler(update: Update, context: CallbackContext):
+async def confirm_rsi_update_handler(update: Update, context: CallbackContext):
     query = update.callback_query
     if not query:
         return
-    query.answer()
+    await query.answer()
 
     record_id = context.user_data.get("record_id")
     diagnosis = context.user_data.get("diagnosis", "")
@@ -748,7 +743,7 @@ def confirm_rsi_update_handler(update: Update, context: CallbackContext):
         end_date=end_date
     )
 
-    reply(update, "RSI update saved. Thank you!")
+    await reply(update, "RSI update saved. Thank you!")
     context.user_data.clear()
 
 # def report_rsi_command(update: Update, context: CallbackContext):
