@@ -121,12 +121,6 @@ def count_temp_statuses(temp_statuses):
 async def generate_parade_state(update, context):
 	"""Generates the current parade state"""
 
-	out_of_camp = update.message.text.strip()
-	if not out_of_camp.isdigit():
-		await update.message.reply_text("❌ Numbers only.")
-		return
-	out_of_camp = int(out_of_camp)
-
 	current_datetime = datetime.now()
 	current_time = current_datetime.time()
 	current_date = current_datetime.date()
@@ -181,6 +175,14 @@ async def generate_parade_state(update, context):
 	others_count = permstatus_count = 0
 	
 	total_strength = len(all_cadets)
+	out_of_camp = update.message.text.strip()
+	if not out_of_camp.isdigit():
+		await update.message.reply_text("❌ Only digits are allowed.\n\nPlease input the number of out-of-camp personnel:")
+		return
+	out_of_camp = int(out_of_camp)
+	if out_of_camp > total_strength:
+		await update.message.reply_text("❌ Number of personnel cannot be greater than total strength.\n\nPlease input the number of out-of-camp personnel:")
+		return
 	current_strength = total_strength - out_of_camp
 	
 	parade_state_text = f"""
