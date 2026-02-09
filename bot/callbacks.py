@@ -36,6 +36,9 @@ async def text_input_router(update, context):
     elif mode in {"report", "update", "ma_report", "rsi_report", "rsi_update", "update_ma"}:
         from bot.rso_handler import manual_input_handler
         await manual_input_handler(update, context)
+    elif mode == "PARADE_STATE":
+        from bot.parade_state import generate_parade_state
+        await generate_parade_state(update, context)
 
 # =========================
 # STATUS MENU HANDLER
