@@ -92,3 +92,13 @@ class MedicalStatus(Base):
     
     user = relationship("User", back_populates="medical_statuses")
     source_event = relationship("MedicalEvent", back_populates="statuses")
+    
+class SftSessions(Base):
+    __tablename__ = "sft_sessions"
+
+    id = Column(Integer, primary_key=True)
+
+    start_datetime = Column(DateTime, nullable=False, default=now_sg)
+    end_datetime = Column(DateTime, nullable=False, default=now_sg)
+
+    created_at = Column(DateTime, default=now_sg)
