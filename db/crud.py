@@ -76,7 +76,19 @@ def clear_user_data() -> dict[str, int]:
         raise
     finally:
         session.close()
-        
+
+def list_users(limit: int = 200) -> list[User]:
+    session = SessionLocal()
+    try:
+        return (
+            session.query(User)
+            .order_by(User.rank, User.full_name)
+            .limit(limit)
+            .all()
+        )
+    finally:
+        session.close()
+
 def get_all_cadet_names():
     records = db.query(User).filter(
         User.role == "cadet"

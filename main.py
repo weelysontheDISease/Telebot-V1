@@ -11,6 +11,7 @@ from bot.commands import (
     start_parade_state,
     import_user,
     import_user_document,
+    import_user_callback,
 )
 
 from bot.callbacks import (
@@ -79,7 +80,10 @@ def main():
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
     )
-    
+
+    application.add_handler(
+        CallbackQueryHandler(import_user_callback, pattern=r"^import_user\|")
+    )
     application.add_handler(
         MessageHandler(filters.Document.ALL, import_user_document)
     )

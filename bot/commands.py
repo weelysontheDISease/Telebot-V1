@@ -136,7 +136,7 @@ async def start_parade_state(update, context):
 # =========================
 # USER IMPORT (CSV)
 # =========================
-async def _is_admin(user_id: int | None) -> bool:
+def _is_admin(user_id: int | None) -> bool:
     return user_id is not None and user_id in ADMIN_IDS
 
 
@@ -185,22 +185,16 @@ async def import_user(update, context):
         await reply(update, "❌ You are not authorized to use /import_user.")
         return
 
-    args = {arg.lower() for arg in (context.args or [])}
-    clear_first = "clear" in args or "reset" in args
-
-    if update.message and update.message.document:
-        await _handle_import_csv(update, context, clear_first)
-        return
-
     context.user_data.clear()
-    context.user_data["mode"] = "IMPORT_USER"
-    context.user_data["import_clear"] = clear_first
-
+    keyboard = [
+        [InlineKeyboardButton("📥 Import users (CSV)", callback_data="import_user|import")],
+        [InlineKeyboardButton("👥 Display current users", callback_data="import_user|list")],
+        [InlineKeyboardButton("🧹 Clear database", callback_data="import_user|clear")],
+    ]
     await reply(
         update,
-        "📥 Send the CSV file to import users.\n"
-        "Tip: use `/import_user clear` to wipe existing data before import.",
-        parse_mode="Markdown",
+        "Choose an action:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
 
@@ -214,3 +208,65 @@ async def import_user_document(update, context):
     clear_first = bool(context.user_data.get("import_clear"))
     context.user_data.clear()
     await _handle_import_csv(update, context, clear_first)
+
+
+async def import_user_callback(update, context):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    if not _is_admin(update.effective_user.id if update.effective_user else None):
+        await reply(update, "❌ You are not authorized to manage imports.")
+        return
+
+    _, action = query.data.split("|", 1)
+
+    if action == "import":
+        context.user_data.clear()
+        context.user_data["mode"] = "IMPORT_USER"
+        context.user_data["import_clear"] = False
+        await reply(update, "📥 Send the CSV file to import users.")
+        return
+
+    if action == "list":
+        users = list_users()
+        if not users:
+            await reply(update, "No users found.")
+            return
+        lines = ["Current users:"]
+        for user in users:
+            admin_flag = " (admin)" if user.is_admin else ""
+            lines.append(f"- {user.rank} {user.full_name} [{user.role}]{admin_flag}")
+        if len(users) >= 200:
+            lines.append("")
+            lines.append("Showing first 200 users.")
+        await reply(update, "\n".join(lines))
+        return
+
+    if action == "clear":
+        keyboard = [
+            [InlineKeyboardButton("✅ Confirm clear", callback_data="import_user|confirm_clear")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="import_user|cancel")],
+        ]
+        await reply(
+            update,
+            "This will delete all users and medical records. Are you sure?",
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return
+
+    if action == "confirm_clear":
+        cleared = clear_user_data()
+        await reply(
+            update,
+            "🧹 Cleared existing data: "
+            f"{cleared['users']} users, "
+            f"{cleared['medical_events']} medical events, "
+            f"{cleared['medical_statuses']} medical statuses.",
+        )
+        return
+
+    if action == "cancel":
+        context.user_data.clear()
+        await reply(update, "Cancelled.")
