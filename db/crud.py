@@ -91,14 +91,16 @@ def create_medical_status(
     status_type: str,
     description: str,
     start_date,
-    end_date
+    end_date,
+    source_event_id: int | None = None,
 ):
     status = MedicalStatus(
         user_id=user_id,
         status_type=status_type,
         description=description,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        source_event_id=source_event_id,
     )
     db.add(status)
     db.commit()
@@ -112,6 +114,23 @@ def get_active_statuses(target_date: date):
         MedicalStatus.end_date >= target_date
     ).all()
 
+def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
+    """Delete medical statuses/events before target_date. Returns (statuses, events)."""
+    session = SessionLocal()
+    try:
+        statuses_deleted = session.query(MedicalStatus).filter(
+            MedicalStatus.end_date < target_date
+        ).delete(synchronize_session=False)
+        events_deleted = session.query(MedicalEvent).filter(
+            MedicalEvent.event_date < target_date
+        ).delete(synchronize_session=False)
+        session.commit()
+        return statuses_deleted, events_deleted
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 # ---------- Medical Events ----------
 
 def get_user_records(name: str):

@@ -71,6 +71,8 @@ class MedicalEvent(Base):
     event_time = Column(Time, nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    statuses = relationship("MedicalStatus", back_populates="source_event")
     
     user = relationship("User", back_populates="medical_events")
     
@@ -86,7 +88,8 @@ class MedicalStatus(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
 
-    source_event_id = Column(Integer)
+    source_event_id = Column(Integer, ForeignKey("medical_events.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     
     user = relationship("User", back_populates="medical_statuses")
+    source_event = relationship("MedicalEvent", back_populates="statuses")
