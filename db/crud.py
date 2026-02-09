@@ -77,6 +77,27 @@ def clear_user_data() -> dict[str, int]:
     finally:
         session.close()
 
+def get_all_cadet_names():
+    session = SessionLocal()
+    try:
+        records = session.query(User).filter(
+            func.lower(User.role) == "cadet",
+            User.is_active.is_(True),
+        ).all()
+        return [record.rank + " " + record.full_name for record in records]
+    finally:
+        session.close()
+
+def get_all_instructor_names():
+    session = SessionLocal()
+    try:
+        records = session.query(User).filter(
+            func.lower(User.role) == "instructor"
+        ).all()
+        return [record.rank + " " + record.full_name for record in records]
+    finally:
+        session.close()
+
 def list_users(limit: int = 200) -> list[User]:
     session = SessionLocal()
     try:
