@@ -1,7 +1,7 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import BigInteger, Column, Integer, String, Boolean, Date, DateTime, Time, Text, ForeignKey
-from datetime import datetime
+from sqlalchemy import BigInteger, Column, Integer, String, Boolean, Date, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
+from utils.datetime_utils import now_sg
 
 class Base(DeclarativeBase):
     pass
@@ -19,9 +19,9 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_sg)
     updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=now_sg, onupdate=now_sg
     )
     
     medical_statuses = relationship("MedicalStatus", back_populates="user")
@@ -50,7 +50,7 @@ class MovementLog(Base):
     time = Column(String, nullable=False)  # HHMM
 
     created_by = Column(Integer, nullable=False)  # telegram_id
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_sg)
     
 class MedicalEvent(Base):
     __tablename__ = "medical_events"
@@ -67,10 +67,11 @@ class MedicalEvent(Base):
 
     endorsed_by = Column(String)
 
-    event_date = Column(Date, nullable=False)
-    event_time = Column(Time, nullable=False)
+    event_datetime = Column(DateTime, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=now_sg)
+
+    statuses = relationship("MedicalStatus", back_populates="source_event")
     
     user = relationship("User", back_populates="medical_events")
     
@@ -86,7 +87,8 @@ class MedicalStatus(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
 
-    source_event_id = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    source_event_id = Column(Integer, ForeignKey("medical_events.id"))
+    created_at = Column(DateTime, default=now_sg)
     
     user = relationship("User", back_populates="medical_statuses")
+    source_event = relationship("MedicalEvent", back_populates="statuses")
