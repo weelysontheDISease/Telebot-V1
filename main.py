@@ -78,7 +78,6 @@ def main():
     # -----------------------------
     application.add_handler(
     CallbackQueryHandler(callback_router, pattern=r"^(mov|sft)"),
-    block=False,
     )
     
     application.add_handler(
