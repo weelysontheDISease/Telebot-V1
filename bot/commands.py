@@ -1,8 +1,8 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
 from bot.helpers import reply
 from config.constants import ACTIVITIES
-
+from services.db_service import get_sft_window
+from db.crud import get_all_cadet_names
 
 # =========================
 # START ENTRY POINT
@@ -20,26 +20,39 @@ async def start(update, context):
 # SFT ENTRY POINT
 # =========================
 async def start_sft(update, context):
+    window = get_sft_window()
+
+    if not window:
+        await reply(
+            update,
+            "❌ PT SFT has not been opened by IC yet.\n"
+            "Please wait for instructions."
+        )
+        return
+
     context.user_data.clear()
     context.user_data["mode"] = "SFT"
+    context.user_data["start"] = window.start
+    context.user_data["end"] = window.end
+    context.user_data["date"] = window.date
 
-    keyboard = []
-
-    for item in ACTIVITIES:
-        # Split "Gym @ Wingline" → ("Gym", "Wingline")
-        activity, location = item.split(" @ ", 1)
-
-        keyboard.append([
+    keyboard = [
+        [
             InlineKeyboardButton(
-                item,  # UI keeps the "@"
-                callback_data=f"sft_activity|{activity}|{location}"
+                activity,
+                callback_data=f"sft_activity|{activity}"
             )
-        ])
+        ]
+        for activity in ACTIVITIES
+    ]
 
     await reply(
         update,
-        "🏋️ SFT mode started.\n\nSelect activity:",
+        f"🏋️ *PT SFT Open*\n\n"
+        f"Time: {window.start}-{window.end}\n\n"
+        f"Select activity:",
         reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
     )
 
 
@@ -50,11 +63,28 @@ async def start_movement(update, context):
     context.user_data.clear()
     context.user_data["mode"] = "MOVEMENT"
     context.user_data["selected"] = set()
+    names = get_all_cadet_names()
+    context.user_data["all_names"] = names
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"⬜ {name}",
+                callback_data=f"mov:name|{name}"
+            )
+        ]
+        for name in names
+    ]
+
+    keyboard.append(
+        [InlineKeyboardButton("✅ Done Selecting", callback_data="mov:done")]
+    )
 
     await reply(
         update,
-        "🚶 Movement reporting started.\n\n"
-        "Select personnel using the buttons."
+        "🚶 *Movement reporting started*\n\nSelect personnel:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
     )
 
 
@@ -72,15 +102,14 @@ async def start_status(update, context):
         [InlineKeyboardButton("✏️ Update MA", callback_data="status_menu|update_ma")],
         [InlineKeyboardButton("🤒 Report RSI", callback_data="status_menu|report_rsi")],
         [InlineKeyboardButton("✏️ Update RSI", callback_data="status_menu|update_rsi")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="status_menu|cancel")]
+        [InlineKeyboardButton("❌ Cancel", callback_data="status_menu|cancel")],
     ]
 
     await reply(
         update,
-        "📊 *Status Reporting Menu*\n\n"
-        "Select an option:",
+        "📊 *Status Reporting Menu*\n\nSelect an option:",
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )
 
 
