@@ -23,7 +23,6 @@ def _normalize_username(value: str | None):
         name = name[1:]
     return name or None
 
-
 def create_user(
     full_name: str,
     rank: str,
@@ -152,6 +151,7 @@ def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
         raise
     finally:
         session.close()
+        
 # ---------- Medical Events ----------
 
 # RSO Records
@@ -310,6 +310,8 @@ def update_rsi_record(
         db.refresh(record)
     return record
 
+
+# Other Queries
 def get_medical_events():
     return db.query(
         MedicalEvent,
