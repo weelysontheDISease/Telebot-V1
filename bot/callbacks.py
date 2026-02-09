@@ -10,6 +10,7 @@ from config.constants import (
     ADMIN_IDS,
 )
 
+# IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
 
 
@@ -221,7 +222,7 @@ async def handle_movement_callbacks(update, context):
         context.user_data["awaiting_from"] = True
         await reply(update, "📍 Where are they moving from?")
         return
-    
+
     if data == "mov:confirm":
         msg = context.user_data.get("final_message")
 
@@ -252,7 +253,7 @@ async def handle_movement_callbacks(update, context):
 async def movement_text_input(update, context):
     if context.user_data.get("mode") != "MOVEMENT":
         return
-    
+
     if context.user_data.get("awaiting_from"):
         value = update.message.text.strip()
         if not value:
@@ -274,7 +275,7 @@ async def movement_text_input(update, context):
         context.user_data["awaiting_time"] = True
         await reply(update, "⏰ What time? (HHMM)")
         return
-    
+
     if not context.user_data.get("awaiting_time"):
         return
 

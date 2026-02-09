@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from db.database import SessionLocal
 from db.models import MedicalEvent, MedicalStatus, User
 from utils.datetime_utils import now_sg, SG_TZ
@@ -77,6 +78,18 @@ def clear_user_data() -> dict[str, int]:
     finally:
         session.close()
 
+def list_users(limit: int = 200) -> list[User]:
+    session = SessionLocal()
+    try:
+        return (
+            session.query(User)
+            .order_by(User.rank, User.full_name)
+            .limit(limit)
+            .all()
+        )
+    finally:
+        session.close()
+
 def get_all_cadet_names():
     session = SessionLocal()
     try:
@@ -97,34 +110,6 @@ def get_all_instructor_names():
         return [record.rank + " " + record.full_name for record in records]
     finally:
         session.close()
-
-def list_users(limit: int = 200) -> list[User]:
-    session = SessionLocal()
-    try:
-        return (
-            session.query(User)
-            .order_by(User.rank, User.full_name)
-            .limit(limit)
-            .all()
-        )
-    finally:
-        session.close()
-
-def get_all_cadet_names():
-    records = db.query(User).filter(
-        User.role == "cadet"
-    ).all()
-
-    NAMES = [record.rank + " " + record.full_name for record in records]
-    return NAMES
-
-def get_all_instructor_names():
-    records = db.query(User).filter(
-        User.role == "instructor"
-    ).all()
-
-    INSTRUCTOR_NAMES = [record.rank + " " + record.full_name for record in records]
-    return INSTRUCTOR_NAMES
 
 # ---------- Medical ----------
 
@@ -375,3 +360,8 @@ def get_all_cadets():
     return db.query(User).filter(
         User.role == "cadet"
 	).all()
+
+def get_all_instructors():
+    return db.query(User).filter(
+        User.role == "instructor"
+    ).all()

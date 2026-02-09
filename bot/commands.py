@@ -1,12 +1,11 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
 import os
 import tempfile
 
 from bot.helpers import reply
 from config.constants import ACTIVITIES, ADMIN_IDS
 from services.db_service import get_sft_window
-from db.crud import clear_user_data, get_all_cadet_names
+from db.crud import clear_user_data, get_all_cadet_names, list_users
 from db.import_users_csv import import_users
 
 # =========================
@@ -131,7 +130,7 @@ async def start_parade_state(update, context):
 		"📋Parade State started.\n\n"
 		"Please input the number of out-of-camp personnel:"
 	)
-     
+
 
 # =========================
 # USER IMPORT (CSV)
@@ -185,7 +184,6 @@ async def _handle_import_csv(update, context, clear_first: bool):
         f"created: {result['created']}, "
         f"updated: {result['updated']}.",
     )
-
 
 
 async def import_user(update, context):

@@ -77,19 +77,18 @@ def main():
     # Callback Handlers (Buttons)
     # -----------------------------
     application.add_handler(
-    CallbackQueryHandler(callback_router, pattern=r"^(mov|sft)"),
+        CallbackQueryHandler(callback_router, pattern=r"^(mov|sft)")
     )
-    
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
     )
-
     application.add_handler(
         CallbackQueryHandler(import_user_callback, pattern=r"^import_user\|")
     )
     application.add_handler(
         MessageHandler(filters.Document.ALL, import_user_document)
     )
+
 
     # -----------------------------
     # Job Queue (Daily Message)
