@@ -59,6 +59,24 @@ def create_user(
     db.refresh(user)
     return user
 
+def clear_user_data() -> dict[str, int]:
+    session = SessionLocal()
+    try:
+        statuses_deleted = session.query(MedicalStatus).delete(synchronize_session=False)
+        events_deleted = session.query(MedicalEvent).delete(synchronize_session=False)
+        users_deleted = session.query(User).delete(synchronize_session=False)
+        session.commit()
+        return {
+            "medical_statuses": statuses_deleted,
+            "medical_events": events_deleted,
+            "users": users_deleted,
+        }
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+        
 def get_all_cadet_names():
     records = db.query(User).filter(
         User.role == "cadet"

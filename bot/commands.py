@@ -1,8 +1,13 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+import os
+import tempfile
+
 from bot.helpers import reply
-from config.constants import ACTIVITIES
+from config.constants import ACTIVITIES, ADMIN_IDS
 from services.db_service import get_sft_window
-from db.crud import get_all_cadet_names
+from db.crud import clear_user_data, get_all_cadet_names
+from db.import_users_csv import import_users
 
 # =========================
 # START ENTRY POINT
@@ -126,3 +131,86 @@ async def start_parade_state(update, context):
 		"📋Parade State started.\n\n"
 		"Please input the number of out-of-camp personnel:"
 	)
+     
+
+# =========================
+# USER IMPORT (CSV)
+# =========================
+async def _is_admin(user_id: int | None) -> bool:
+    return user_id is not None and user_id in ADMIN_IDS
+
+
+async def _handle_import_csv(update, context, clear_first: bool):
+    document = update.message.document if update.message else None
+    if not document:
+        await reply(update, "❌ Please attach a CSV file for import.")
+        return
+
+    if not document.file_name or not document.file_name.lower().endswith(".csv"):
+        await reply(update, "❌ Only .csv files are supported.")
+        return
+
+    if clear_first:
+        cleared = clear_user_data()
+        await reply(
+            update,
+            "🧹 Cleared existing data: "
+            f"{cleared['users']} users, "
+            f"{cleared['medical_events']} medical events, "
+            f"{cleared['medical_statuses']} medical statuses.",
+        )
+
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        file = await context.bot.get_file(document.file_id)
+        await file.download_to_drive(tmp_path)
+        result = import_users(tmp_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+    await reply(
+        update,
+        "✅ Import complete. "
+        f"Processed: {result['processed']}, "
+        f"created: {result['created']}, "
+        f"updated: {result['updated']}.",
+    )
+
+
+async def import_user(update, context):
+    if not _is_admin(update.effective_user.id if update.effective_user else None):
+        await reply(update, "❌ You are not authorized to use /import_user.")
+        return
+
+    args = {arg.lower() for arg in (context.args or [])}
+    clear_first = "clear" in args or "reset" in args
+
+    if update.message and update.message.document:
+        await _handle_import_csv(update, context, clear_first)
+        return
+
+    context.user_data.clear()
+    context.user_data["mode"] = "IMPORT_USER"
+    context.user_data["import_clear"] = clear_first
+
+    await reply(
+        update,
+        "📥 Send the CSV file to import users.\n"
+        "Tip: use `/import_user clear` to wipe existing data before import.",
+        parse_mode="Markdown",
+    )
+
+
+async def import_user_document(update, context):
+    if context.user_data.get("mode") != "IMPORT_USER":
+        return
+    if not _is_admin(update.effective_user.id if update.effective_user else None):
+        await reply(update, "❌ You are not authorized to import users.")
+        return
+
+    clear_first = bool(context.user_data.get("import_clear"))
+    context.user_data.clear()
+    await _handle_import_csv(update, context, clear_first)

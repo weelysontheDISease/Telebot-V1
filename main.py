@@ -8,7 +8,9 @@ from bot.commands import (
     start_sft,
     start_movement,
     start_status,
-    start_parade_state
+    start_parade_state,
+    import_user,
+    import_user_document,
 )
 
 from bot.callbacks import (
@@ -66,6 +68,7 @@ def main():
     application.add_handler(CommandHandler("start_movement", start_movement))
     application.add_handler(CommandHandler("pt_sft_admin", start_pt_sft_admin))
     application.add_handler(CommandHandler("start_parade_state", start_parade_state))
+    application.add_handler(CommandHandler("import_user", import_user))
     register_status_handlers(application)
 
 
@@ -76,7 +79,10 @@ def main():
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
     )
-
+    
+    application.add_handler(
+        MessageHandler(filters.Document.ALL, import_user_document)
+    )
 
     # -----------------------------
     # Job Queue (Daily Message)

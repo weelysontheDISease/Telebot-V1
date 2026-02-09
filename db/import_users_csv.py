@@ -48,6 +48,9 @@ def _normalize_username(value):
 
 def import_users(path, require_username=False):
     session = SessionLocal()
+    created = 0
+    updated = 0
+    processed = 0
     try:
         with open(path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -60,6 +63,7 @@ def import_users(path, require_username=False):
                 raise ValueError("CSV must include telegram_username column")
 
             for row in reader:
+                processed += 1
                 telegram_id_raw = (row.get("telegram_id") or "").strip()
                 telegram_id = None
                 if telegram_id_raw:
@@ -113,6 +117,9 @@ def import_users(path, require_username=False):
                 if not user:
                     user = User()
                     session.add(user)
+                    created += 1
+                else:
+                    updated += 1
 
                 if telegram_id is not None:
                     user.telegram_id = telegram_id
@@ -125,6 +132,7 @@ def import_users(path, require_username=False):
                 user.is_active = (row.get("is_active", "true").lower() != "false")
 
         session.commit()
+        return {"processed": processed, "created": created, "updated": updated}
     except:
         session.rollback()
         raise
@@ -137,5 +145,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) != 2:
         raise SystemExit("Usage: python -m db.import_users_csv <path-to-csv>")
-    import_users(sys.argv[1])
-    print("Import complete.")
+    result = import_users(sys.argv[1])
+    print(
+        "Import complete.",
+        f"Processed: {result['processed']}, created: {result['created']}, updated: {result['updated']}",
+    )
