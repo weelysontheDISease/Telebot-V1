@@ -27,9 +27,7 @@ from telegram.ext import (
 from config.settings import BOT_TOKEN
 from bot.commands import (
     start_sft,
-    start_movement,
-    start_status,
-    start_parade_state
+    start_movement
 )
 from bot.callbacks import (
     callback_router,
