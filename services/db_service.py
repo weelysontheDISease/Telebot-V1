@@ -143,3 +143,6 @@ class SFTService:
 
 def get_sft_window():
     return SFTService.get_window()
+
+def set_sft_window(date: str, start: str, end: str):
+    SFTService.set_window(date=date, start=start, end=end)
