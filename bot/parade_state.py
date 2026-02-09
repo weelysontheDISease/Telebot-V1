@@ -118,7 +118,7 @@ def count_temp_statuses(temp_statuses):
 		count += len(value)
 	return count
 
-async def start_paradestate(update, context):
+async def generate_parade_state(update, context):
 	"""Generates the current parade state"""
 
 	current_datetime = datetime.now()
