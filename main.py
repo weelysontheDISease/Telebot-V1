@@ -1,5 +1,6 @@
 from email.mime import application
 from config.settings import BOT_TOKEN
+from config.constants import IC_GROUP_CHAT_ID
 from services.db_service import DatabaseService
 
 from bot.commands import (
@@ -50,7 +51,13 @@ def main():
     # Command Handlers
     # -----------------------------
 
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, cet_handler))
+    application.add_handler(
+        MessageHandler(
+            filters.Chat(chat_id=IC_GROUP_CHAT_ID) & filters.TEXT & ~filters.COMMAND,
+            cet_handler,
+            block=False,
+        )
+    )
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("start_sft", start_sft))
     application.add_handler(CommandHandler("start_status", start_status))
@@ -66,14 +73,6 @@ def main():
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
     )
 
-
-    # -----------------------------
-    # Text Input Handler
-    # (movement manual time, etc.)
-    # -----------------------------
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
-    )
 
     # -----------------------------
     # Job Queue (Daily Message)

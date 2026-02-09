@@ -1,8 +1,8 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.helpers import reply
-from config.constants import ACTIVITIES, NAMES
+from config.constants import ACTIVITIES
 from services.db_service import get_sft_window
-
+from db.crud import get_all_cadet_names
 
 # =========================
 # START ENTRY POINT
@@ -63,7 +63,8 @@ async def start_movement(update, context):
     context.user_data.clear()
     context.user_data["mode"] = "MOVEMENT"
     context.user_data["selected"] = set()
-    context.user_data["all_names"] = NAMES
+    names = get_all_cadet_names()
+    context.user_data["all_names"] = names
 
     keyboard = [
         [
@@ -72,7 +73,7 @@ async def start_movement(update, context):
                 callback_data=f"mov:name|{name}"
             )
         ]
-        for name in NAMES
+        for name in names
     ]
 
     keyboard.append(
