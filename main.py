@@ -1,3 +1,4 @@
+print("BOOT: Python process started")
 from config.settings import BOT_TOKEN
 from bot.commands import start, start_sft, start_movement
 from bot.callbacks import callback_router, text_input_router
@@ -18,6 +19,7 @@ from bot.daily_msg import send_daily_msg
 
 
 def main():
+    print("BOOT: Entered async main()")
     """
     Entry point for the Operations Telegram Bot.
     Responsible only for:
