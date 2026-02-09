@@ -15,7 +15,7 @@ from services.db_service import DatabaseService
 # =========================
 # CALLBACK ROUTER
 # =========================
-from bot.sft_manager import handle_sft_callbacks
+from core.sft_manager import handle_sft_callbacks
 async def callback_router(update, context):
     mode = context.user_data.get("mode")
     if mode == "MOVEMENT":
