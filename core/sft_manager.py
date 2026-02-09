@@ -6,7 +6,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.helpers import reply
 from services.db_service import SFTService
 from db.crud import get_user_by_telegram_id
-from config.constants import SFT_ACTIVITIES
+from config.constants import ACTIVITIES
 
 SG_TZ = pytz.timezone("Asia/Singapore")
 
@@ -18,7 +18,7 @@ def today_sg():
 # =========================
 # SFT CALLBACK HANDLER
 # =========================
-async def handle_sft_callback(update, context):
+async def handle_sft_callbacks(update, context):
     query = update.callback_query
     await query.answer()
     data = query.data

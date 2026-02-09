@@ -56,3 +56,29 @@ async def start_movement(update, context):
         "🚶 Movement reporting started.\n\n"
         "Select personnel using the buttons."
     )
+
+
+# =========================
+# STATUS REPORTING MENU
+# =========================
+def start_status(update, context):
+    """Main menu for RSO/MA/RSI reporting"""
+    context.user_data.clear()
+
+    keyboard = [
+        [InlineKeyboardButton("📋 Report RSO", callback_data="status_menu|report_rso")],
+        [InlineKeyboardButton("✏️ Update RSO", callback_data="status_menu|update_rso")],
+        [InlineKeyboardButton("🏥 Report MA", callback_data="status_menu|report_ma")],
+        [InlineKeyboardButton("✏️ Update MA", callback_data="status_menu|update_ma")],
+        [InlineKeyboardButton("🤒 Report RSI", callback_data="status_menu|report_rsi")],
+        [InlineKeyboardButton("✏️ Update RSI", callback_data="status_menu|update_rsi")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="status_menu|cancel")]
+    ]
+
+    reply(
+        update,
+        "📊 *Status Reporting Menu*\n\n"
+        "Select an option:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
