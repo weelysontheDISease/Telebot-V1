@@ -49,11 +49,13 @@ def _normalize_username(value):
 def _normalize_header(value):
     if value is None:
         return ""
-    text = str(value).strip().lower()
+    text = str(value).lstrip("\ufeff") 
+    text = text.strip().lower()
     if text.endswith(":"):
         text = text[:-1].strip()
     text = text.replace("-", " ").replace("  ", " ")
     return "_".join(text.split())
+
 
 def import_users(path, require_username=False):
     session = SessionLocal()
