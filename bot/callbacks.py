@@ -1,4 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CallbackQueryHandler
 
 from bot.helpers import reply
 from core.report_manager import ReportManager
@@ -32,7 +33,67 @@ async def text_input_router(update, context):
 
     if mode == "MOVEMENT":
         await movement_text_input(update, context)
+    elif mode in {"report", "update", "ma_report", "rsi_report", "rsi_update", "update_ma"}:
+        from bot.rso_handler import manual_input_handler
+        await manual_input_handler(update, context)
 
+# =========================
+# STATUS MENU HANDLER
+# =========================
+
+def status_menu_handler(update, context):
+    query = update.callback_query
+    query.answer()
+    _, action = query.data.split("|", 1)
+
+    if action == "report_rso":
+        from bot.rso_handler import start_status_report
+        start_status_report(update, context)
+    elif action == "update_rso":
+        from bot.rso_handler import start_update_status
+        start_update_status(update, context)
+    elif action == "report_ma":
+        from bot.rso_handler import start_ma_report
+        start_ma_report(update, context)
+    elif action == "update_ma":
+        from bot.rso_handler import update_endorsed
+        update_endorsed(update, context)
+    elif action == "report_rsi":
+        from bot.rso_handler import start_rsi_report
+        start_rsi_report(update, context)
+    elif action == "update_rsi":
+        from bot.rso_handler import start_update_rsi
+        start_update_rsi(update, context)
+    elif action == "cancel":
+        context.user_data.clear()
+        reply(update, "❌ Cancelled. Use /start_status to begin again.")
+
+
+def register_status_handlers(dispatcher):
+    from bot.rso_handler import (
+        name_selection_handler,
+        confirm_handler,
+        cancel,
+        mc_days_button_handler,
+        confirm_ma_handler,
+        instructor_selection_handler,
+        rsi_days_button_handler,
+        rsi_status_type_handler,
+        confirm_rsi_report_handler,
+        confirm_rsi_update_handler,
+    )
+
+    dispatcher.add_handler(CallbackQueryHandler(status_menu_handler, pattern=r"^status_menu\|"))
+    dispatcher.add_handler(CallbackQueryHandler(name_selection_handler, pattern=r"^(name|rsi_name|update_name|update_ma_name|rsi_update_name)\|"))
+    dispatcher.add_handler(CallbackQueryHandler(mc_days_button_handler, pattern=r"^mc_days\|"))
+    dispatcher.add_handler(CallbackQueryHandler(confirm_handler, pattern=r"^confirm$"))
+    dispatcher.add_handler(CallbackQueryHandler(cancel, pattern=r"^cancel$"))
+    dispatcher.add_handler(CallbackQueryHandler(confirm_ma_handler, pattern=r"^confirm_ma$"))
+    dispatcher.add_handler(CallbackQueryHandler(instructor_selection_handler, pattern=r"^instructor\|"))
+    dispatcher.add_handler(CallbackQueryHandler(rsi_days_button_handler, pattern=r"^rsi_days\|"))
+    dispatcher.add_handler(CallbackQueryHandler(rsi_status_type_handler, pattern=r"^rsi_type\|"))
+    dispatcher.add_handler(CallbackQueryHandler(confirm_rsi_report_handler, pattern=r"^confirm_rsi_report$"))
+    dispatcher.add_handler(CallbackQueryHandler(confirm_rsi_update_handler, pattern=r"^confirm_rsi_update$"))
 
 # =========================
 # MOVEMENT CALLBACKS

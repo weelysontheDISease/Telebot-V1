@@ -23,6 +23,25 @@ from telegram.ext import (
     filters,
 )
 
+from config.settings import BOT_TOKEN
+from bot.commands import (
+    start_sft,
+    start_movement,
+    start_cet,
+    start_status,
+    start_parade_state
+)
+from bot.callbacks import (
+    callback_router,
+    text_input_router,
+    register_status_handlers
+)
+
+from config.settings import BOT_TOKEN
+from bot.commands import start, start_sft, start_movement
+from bot.callbacks import callback_router, text_input_router
+from services.db_service import DatabaseService
+
 
 def main():
     print("BOOT: main entered", flush=True)
@@ -46,7 +65,10 @@ def main():
     # -----------------------------
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("start_sft", start_sft))
+    application.add_handler(CommandHandler("start_status", start_status))
     application.add_handler(CommandHandler("start_movement", start_movement))
+    register_status_handlers(application)
+
 
     # -----------------------------
     # Callback Handlers (Buttons)
