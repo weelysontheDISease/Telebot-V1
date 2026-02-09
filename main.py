@@ -65,8 +65,9 @@ def main():
     # -----------------------------
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("start_sft", start_sft))
+    application.add_handler(CommandHandler("start_status", start_status))
     application.add_handler(CommandHandler("start_movement", start_movement))
-    register_status_handlers(dispatcher)
+    register_status_handlers(application)
 
 
     # -----------------------------
