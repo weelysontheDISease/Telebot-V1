@@ -76,7 +76,11 @@ def main():
     # -----------------------------
     # Callback Handlers (Buttons)
     # -----------------------------
-    application.add_handler(CallbackQueryHandler(callback_router))
+    application.add_handler(
+    CallbackQueryHandler(callback_router, pattern=r"^(mov|sft)"),
+    block=False,
+    )
+    
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
     )

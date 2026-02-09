@@ -10,7 +10,6 @@ from config.constants import (
     ADMIN_IDS,
 )
 
-# IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
 
 
@@ -42,12 +41,9 @@ async def callback_router(update, context):
         return
 
     # ------------------------------
-    # STATUS callbacks are handled by pattern handlers
+    # STATUS/import-user callbacks are handled by pattern handlers
     # ------------------------------
-    await query.answer(
-        "Invalid or expired action. Please restart.",
-        show_alert=True,
-    )
+    return
 
 
 # ==================================================
