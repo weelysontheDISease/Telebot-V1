@@ -15,7 +15,7 @@ ADMIN_IDS = list({
         for admin_id in os.getenv("ADMIN_IDS", "").split(",")
         if admin_id.strip()
     )
-}
+})
 
 # Topics in IC Group
 MOVEMENT_TOPIC_ID = 322
