@@ -13,10 +13,8 @@ def cet_handler(update, context):
     if msg.message_thread_id != CET_TOPIC_ID:
         return
     
-    first_line = msg.text.split("\n")[0]
 
-
-    if CET_KEYWORDS.lower() in first_line.lower():
+    if all(word.lower() in msg.text.lower() for word in CET_KEYWORDS):
         context.bot.copy_message(
             chat_id = CADET_CHAT_ID,
             message_thread_id = CADET_CET_TOPIC_ID,
@@ -24,4 +22,4 @@ def cet_handler(update, context):
             message_id = msg.message_id
         )
     
-    print(f"--- {first_line} sent ---")
+        print(f"--- {msg.text.split("\n")[0]} sent ---")

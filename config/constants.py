@@ -139,7 +139,9 @@ PARADE_STATE_SEPARATOR = "-" * 56
 
 # Optional keywords for CET filtering (future-proofing)
 CET_KEYWORDS = [
-    "CET"
+    "CET", 
+    "MDST",
+    "WDI"
 ]
 
 # =========================
