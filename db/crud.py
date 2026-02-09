@@ -91,25 +91,34 @@ def create_medical_status(
     status_type: str,
     description: str,
     start_date,
-    end_date
+    end_date,
+    source_event_id: int | None = None,
 ):
     status = MedicalStatus(
         user_id=user_id,
         status_type=status_type,
         description=description,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        source_event_id=source_event_id,
     )
     db.add(status)
     db.commit()
     db.refresh(status)
     return status
 
-def get_active_statuses(target_date: date):
-    """Retrieve all medical statuses active on the target_date."""
-    return db.query(MedicalStatus).filter(
-        MedicalStatus.start_date <= target_date,
-        MedicalStatus.end_date >= target_date
+def get_active_statuses(today):
+    return db.query(
+        MedicalStatus,
+        User,
+        MedicalEvent,
+        ).join(
+            User, MedicalStatus.user_id == User.id
+		).join(
+			MedicalEvent, MedicalStatus.source_event_id == MedicalEvent.id
+		).filter(
+        MedicalStatus.start_date <= today,
+        MedicalStatus.end_date >= today
     ).all()
 
 # ---------- Medical Events ----------
@@ -203,18 +212,7 @@ def get_medical_events():
 		User, MedicalEvent.user_id == User.id
     ).all()
 
-def get_active_statuses(today):
-    return db.query(
-        MedicalStatus,
-        User
-        ).join(
-            User, MedicalStatus.user_id == User.id
-		).filter(
-        MedicalStatus.start_date <= today,
-        MedicalStatus.end_date >= today
-    ).all()
-
 def get_all_cadets():
     return db.query(User).filter(
-        User.role == "Cadet"
+        User.role == "cadet"
 	).all()
