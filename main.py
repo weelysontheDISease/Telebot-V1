@@ -1,3 +1,4 @@
+from email.mime import application
 from config.settings import BOT_TOKEN
 from services.db_service import DatabaseService
 
@@ -61,6 +62,10 @@ def main():
     # Callback Handlers (Buttons)
     # -----------------------------
     application.add_handler(CallbackQueryHandler(callback_router))
+    application.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
+    )
+
 
     # -----------------------------
     # Text Input Handler

@@ -20,22 +20,34 @@ from core.sft_manager import handle_sft_callbacks
 async def callback_router(update, context):
     """
     Central router for all inline button callbacks.
-    Routes based on current user mode.
+    Routes by callback_data prefix (NOT fragile mode state).
     """
-    mode = context.user_data.get("mode")
+    query = update.callback_query
+    data = query.data
 
-    if mode == "MOVEMENT":
+    # ------------------------------
+    # MOVEMENT (always starts with "mov")
+    # ------------------------------
+    if data.startswith("mov"):
+        context.user_data["mode"] = "MOVEMENT"
         await handle_movement_callbacks(update, context)
+        return
 
-    elif mode == "SFT":
+    # ------------------------------
+    # SFT (always starts with "sft")
+    # ------------------------------
+    if data.startswith("sft"):
+        context.user_data["mode"] = "SFT"
         await handle_sft_callbacks(update, context)
+        return
 
-    else:
-        # Safety fallback to avoid silent failures
-        await update.callback_query.answer(
-            "No active session. Please use /start.",
-            show_alert=True,
-        )
+    # ------------------------------
+    # STATUS callbacks are handled by pattern handlers
+    # ------------------------------
+    await query.answer(
+        "Invalid or expired action. Please restart.",
+        show_alert=True,
+    )
 
 
 # ==================================================
