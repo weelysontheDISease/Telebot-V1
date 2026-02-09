@@ -18,7 +18,7 @@ def today_sg():
 # =========================
 # SFT CALLBACK HANDLER
 # =========================
-async def handle_sft_callback(update, context):
+async def handle_sft_callbacks(update, context):
     query = update.callback_query
     await query.answer()
     data = query.data
