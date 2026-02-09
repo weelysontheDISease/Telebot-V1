@@ -184,7 +184,7 @@ async def generate_parade_state(update, context):
 	current_strength = total_strength - out_of_camp
 	
 	parade_state_text = f"""
-DIS WING 14/26 PRE-MDST PARADE STATE {current_date.strftime('%y%m%d')}, {current_time.strftime('%H%M')}H
+DIS WING 14/26 PRE-MDST PARADE STATE {current_date.strftime('%d%m%y')}, {current_time.strftime('%H%M')}H
 -------------------------------------------------------- 
 
 TOTAL STRENGTH: {total_strength}
