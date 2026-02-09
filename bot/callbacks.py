@@ -6,41 +6,65 @@ from core.report_manager import ReportManager
 from utils.time_utils import is_valid_24h_time
 from config.constants import (
     IC_GROUP_CHAT_ID,
-    SFT_TOPIC_ID,
     MOVEMENT_TOPIC_ID,
     ADMIN_IDS,
 )
-from services.db_service import DatabaseService
 
-
-# =========================
-# CALLBACK ROUTER
-# =========================
+# IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
+
+
+# ==================================================
+# CALLBACK ROUTER
+# ==================================================
 async def callback_router(update, context):
+    """
+    Central router for all inline button callbacks.
+    Routes based on current user mode.
+    """
     mode = context.user_data.get("mode")
+
     if mode == "MOVEMENT":
         await handle_movement_callbacks(update, context)
+
     elif mode == "SFT":
         await handle_sft_callbacks(update, context)
 
+    else:
+        # Safety fallback to avoid silent failures
+        await update.callback_query.answer(
+            "No active session. Please use /start.",
+            show_alert=True,
+        )
 
-# =========================
+
+# ==================================================
 # TEXT INPUT ROUTER
-# =========================
+# ==================================================
 async def text_input_router(update, context):
+    """
+    Routes free-text input based on mode.
+    """
     mode = context.user_data.get("mode")
 
     if mode == "MOVEMENT":
         await movement_text_input(update, context)
-    elif mode in {"report", "update", "ma_report", "rsi_report", "rsi_update", "update_ma"}:
+
+    elif mode in {
+        "report",
+        "update",
+        "ma_report",
+        "rsi_report",
+        "rsi_update",
+        "update_ma",
+    }:
         from bot.rso_handler import manual_input_handler
         await manual_input_handler(update, context)
 
-# =========================
-# STATUS MENU HANDLER
-# =========================
 
+# ==================================================
+# STATUS MENU HANDLER
+# ==================================================
 async def status_menu_handler(update, context):
     query = update.callback_query
     await query.answer()
@@ -49,27 +73,37 @@ async def status_menu_handler(update, context):
     if action == "report_rso":
         from bot.rso_handler import start_status_report
         await start_status_report(update, context)
+
     elif action == "update_rso":
         from bot.rso_handler import start_update_status
         await start_update_status(update, context)
+
     elif action == "report_ma":
         from bot.rso_handler import start_ma_report
         await start_ma_report(update, context)
+
     elif action == "update_ma":
         from bot.rso_handler import update_endorsed
         await update_endorsed(update, context)
+
     elif action == "report_rsi":
         from bot.rso_handler import start_rsi_report
         await start_rsi_report(update, context)
+
     elif action == "update_rsi":
         from bot.rso_handler import start_update_rsi
         await start_update_rsi(update, context)
+
     elif action == "cancel":
         context.user_data.clear()
         await reply(update, "❌ Cancelled. Use /start_status to begin again.")
 
 
 def register_status_handlers(dispatcher):
+    """
+    Registers all status-related callback handlers.
+    These are pattern-based and bypass the main router.
+    """
     from bot.rso_handler import (
         name_selection_handler,
         confirm_handler,
@@ -83,28 +117,62 @@ def register_status_handlers(dispatcher):
         confirm_rsi_update_handler,
     )
 
-    dispatcher.add_handler(CallbackQueryHandler(status_menu_handler, pattern=r"^status_menu\|"))
-    dispatcher.add_handler(CallbackQueryHandler(name_selection_handler, pattern=r"^(name|rsi_name|update_name|update_ma_name|rsi_update_name)\|"))
-    dispatcher.add_handler(CallbackQueryHandler(mc_days_button_handler, pattern=r"^mc_days\|"))
-    dispatcher.add_handler(CallbackQueryHandler(confirm_handler, pattern=r"^confirm$"))
-    dispatcher.add_handler(CallbackQueryHandler(cancel, pattern=r"^cancel$"))
-    dispatcher.add_handler(CallbackQueryHandler(confirm_ma_handler, pattern=r"^confirm_ma$"))
-    dispatcher.add_handler(CallbackQueryHandler(instructor_selection_handler, pattern=r"^instructor\|"))
-    dispatcher.add_handler(CallbackQueryHandler(rsi_days_button_handler, pattern=r"^rsi_days\|"))
-    dispatcher.add_handler(CallbackQueryHandler(rsi_status_type_handler, pattern=r"^rsi_type\|"))
-    dispatcher.add_handler(CallbackQueryHandler(confirm_rsi_report_handler, pattern=r"^confirm_rsi_report$"))
-    dispatcher.add_handler(CallbackQueryHandler(confirm_rsi_update_handler, pattern=r"^confirm_rsi_update$"))
+    dispatcher.add_handler(
+        CallbackQueryHandler(status_menu_handler, pattern=r"^status_menu\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(
+            name_selection_handler,
+            pattern=r"^(name|rsi_name|update_name|update_ma_name|rsi_update_name)\|",
+        )
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(mc_days_button_handler, pattern=r"^mc_days\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(confirm_handler, pattern=r"^confirm$")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(cancel, pattern=r"^cancel$")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(confirm_ma_handler, pattern=r"^confirm_ma$")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(instructor_selection_handler, pattern=r"^instructor\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(rsi_days_button_handler, pattern=r"^rsi_days\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(rsi_status_type_handler, pattern=r"^rsi_type\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(
+            confirm_rsi_report_handler, pattern=r"^confirm_rsi_report$"
+        )
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(
+            confirm_rsi_update_handler, pattern=r"^confirm_rsi_update$"
+        )
+    )
 
-# =========================
+
+# ==================================================
 # MOVEMENT CALLBACKS
-# =========================
+# ==================================================
 async def handle_movement_callbacks(update, context):
     query = update.callback_query
     await query.answer()
     data = query.data
 
     if data == "mov:confirm":
-        msg = context.user_data["final_message"]
+        msg = context.user_data.get("final_message")
+
+        if not msg:
+            await reply(update, "❌ No movement data found.")
+            return
 
         # Send to IC group
         await context.bot.send_message(
@@ -123,9 +191,9 @@ async def handle_movement_callbacks(update, context):
         await reply(update, "✅ Movement report sent.")
 
 
-# =========================
+# ==================================================
 # MOVEMENT TEXT INPUT
-# =========================
+# ==================================================
 async def movement_text_input(update, context):
     if context.user_data.get("mode") != "MOVEMENT":
         return
@@ -160,36 +228,3 @@ async def movement_text_input(update, context):
         "📋 Preview\n\n" + msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
-
-
-# =========================
-# SFT CALLBACKS
-# =========================
-async def handle_sft_callbacks(update, context):
-    query = update.callback_query
-    await query.answer()
-    data = query.data
-
-    if data.startswith("sft:confirm"):
-        if update.effective_user.id not in ADMIN_IDS:
-            await reply(update, "❌ Unauthorized")
-            return
-
-        today = context.user_data["date"]
-        sir = context.user_data["sir"]
-
-        records = DatabaseService.get_sft_by_date(today)
-
-        msg = ReportManager.build_sft_message(
-            sir_name=sir,
-            date=today,
-            records=records,
-        )
-
-        await context.bot.send_message(
-            chat_id=IC_GROUP_CHAT_ID,
-            message_thread_id=SFT_TOPIC_ID,
-            text=msg,
-        )
-
-        await reply(update, "✅ SFT summary sent.")
