@@ -2,6 +2,7 @@ from datetime import date, datetime, time
 from sqlalchemy.orm import Session
 from db.database import SessionLocal
 from db.models import MedicalEvent, MedicalStatus, User
+from utils.datetime_utils import now_sg, SG_TZ
 
 db = SessionLocal()
 
@@ -66,20 +67,16 @@ def create_medical_event(
     event_type: str,
     symptoms: str,
     diagnosis: str,
-    event_date: date | None = None,
-    event_time: time | None = None,
+    event_datetime: datetime | None = None,
 ):
-    if event_date is None or event_time is None:
-        now = datetime.now()
-        event_date = event_date or now.date()
-        event_time = event_time or now.time().replace(microsecond=0)
+    if event_datetime is None:
+        event_datetime = now_sg().replace(microsecond=0)
     event = MedicalEvent(
         user_id=user_id,
         event_type=event_type,
         symptoms=symptoms,
         diagnosis=diagnosis,
-        event_date=event_date,
-        event_time=event_time,
+        event_datetime=event_datetime,
     )
     db.add(event)
     db.commit()
@@ -118,11 +115,12 @@ def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
     """Delete medical statuses/events before target_date. Returns (statuses, events)."""
     session = SessionLocal()
     try:
+        target_start = datetime.combine(target_date, time.min, tzinfo=SG_TZ)
         statuses_deleted = session.query(MedicalStatus).filter(
             MedicalStatus.end_date < target_date
         ).delete(synchronize_session=False)
         events_deleted = session.query(MedicalEvent).filter(
-            MedicalEvent.event_date < target_date
+            MedicalEvent.event_datetime < target_start
         ).delete(synchronize_session=False)
         session.commit()
         return statuses_deleted, events_deleted
@@ -160,7 +158,7 @@ def create_user_record(
         event_type="RSO",
         symptoms=symptoms,
         diagnosis=diagnosis,
-        # start_datetime=datetime.now()
+        event_datetime=now_sg().replace(microsecond=0),
     )
     db.add(event)
     db.commit()
@@ -181,13 +179,17 @@ def create_ma_record(
     if not user:
         raise ValueError("User not found")
 
+    appointment_dt = datetime.combine(
+        datetime.strptime(appointment_date, "%d%m%y").date(),
+        datetime.strptime(appointment_time, "%H%M").time(),
+        tzinfo=SG_TZ,
+    )
     event = MedicalEvent(
         user_id=user.id,
         event_type="MA",
         appointment_type=appointment,
         location=appointment_location,
-        event_date=datetime.strptime(appointment_date, "%d%m%y").date(),
-        event_time=datetime.strptime(appointment_time, "%H%M").time()
+        event_datetime=appointment_dt,
     )
     db.add(event)
     db.commit()
@@ -206,8 +208,11 @@ def update_ma_record(
     if record:
         record.appointment_type = appointment
         record.location = appointment_location
-        record.event_date = datetime.strptime(appointment_date, "%d%m%y").date()
-        record.event_time = datetime.strptime(appointment_time, "%H%M").time()
+        record.event_datetime = datetime.combine(
+            datetime.strptime(appointment_date, "%d%m%y").date(),
+            datetime.strptime(appointment_time, "%H%M").time(),
+            tzinfo=SG_TZ,
+        )
         if instructor:
             record.endorsed_by = instructor
         db.commit()
