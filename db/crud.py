@@ -59,6 +59,22 @@ def create_user(
     db.refresh(user)
     return user
 
+def get_all_cadet_names():
+    records = db.query(User).filter(
+        User.role == "cadet"
+    ).all()
+
+    NAMES = [record.rank + " " + record.full_name for record in records]
+    return NAMES
+
+def get_all_instructor_names():
+    records = db.query(User).filter(
+        User.role == "instructor"
+    ).all()
+
+    INSTRUCTOR_NAMES = [record.rank + " " + record.full_name for record in records]
+    return INSTRUCTOR_NAMES
+
 # ---------- Medical ----------
 
 def create_medical_event(
@@ -136,14 +152,13 @@ def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
 # RSO Records
 
 def get_user_records(name: str):
-    return db.query(MedicalEvent).join(User).filter(User.full_name == name,MedicalEvent.event_type == "RSO").all()
+    return db.query(MedicalEvent).join(User).filter(User.full_name == name, MedicalEvent.event_type == "RSO").all()
 
 def update_user_record(record_id: int, symptoms: str, diagnosis: str,status: str, start_date: str, end_date: str):
     record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
     if record:
         record.symptoms = symptoms
         record.diagnosis = diagnosis
-        record.status = status
         #Add Status start_date and end_date to MedicalStatus Table, with reference to MedicalEvent ID
         medical_status = MedicalStatus(
             user_id=record.user_id,
@@ -161,8 +176,7 @@ def update_user_record(record_id: int, symptoms: str, diagnosis: str,status: str
 def create_user_record(
     name: str,
     symptoms: str,
-    diagnosis: str,
-    status: str
+    diagnosis: str | None = None
 ):
     user = db.query(User).filter(User.full_name == name).first()
     if not user:
@@ -183,7 +197,7 @@ def create_user_record(
 # MA Records
 
 def get_ma_records(name: str):
-    return db.query(MedicalEvent).join(User).filter(User.full_name == name,MedicalEvent.event_type == "MA").all()
+    return db.query(MedicalEvent).join(User).filter(User.full_name == name, MedicalEvent.event_type == "MA").all()
 
 def create_ma_record(
     name: str,
