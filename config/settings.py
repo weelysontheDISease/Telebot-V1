@@ -1,6 +1,6 @@
 import os
 
-BOT_TOKEN = "8592185711:AAG_3jcb1GkQZAQbVqa3wIiv4j6cZNgHP3g"
+BOT_TOKEN = "8592185711:AAFQ4xP6hLf5ZuJyQSzBBpOF76d3QNtkMco"
 
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set in environment variables")
