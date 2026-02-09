@@ -8,11 +8,14 @@ import os
 IC_GROUP_CHAT_ID = -1003592356953
 
 # Admin user IDs (comma-separated) for restricted actions
-ADMIN_IDS = [
-    int(admin_id)
-    for admin_id in os.getenv("ADMIN_IDS", "").split(",")
-    if admin_id.strip()
-]
+ADMIN_IDS = list({
+    905069574,  # Yanliang (owner)
+    *(
+        int(admin_id)
+        for admin_id in os.getenv("ADMIN_IDS", "").split(",")
+        if admin_id.strip()
+    )
+})
 
 # Topics in IC Group
 MOVEMENT_TOPIC_ID = 322
