@@ -91,14 +91,16 @@ def create_medical_status(
     status_type: str,
     description: str,
     start_date,
-    end_date
+    end_date,
+    source_event_id: int | None = None,
 ):
     status = MedicalStatus(
         user_id=user_id,
         status_type=status_type,
         description=description,
         start_date=start_date,
-        end_date=end_date
+        end_date=end_date,
+        source_event_id=source_event_id,
     )
     db.add(status)
     db.commit()
