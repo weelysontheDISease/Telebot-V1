@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
 
 
 # =========================
@@ -26,13 +26,12 @@ class SFTWindow:
 
 
 # =========================
-# DATABASE SERVICE (INIT)
+# DATABASE SERVICE
 # =========================
 
 class DatabaseService:
     @staticmethod
     def initialise():
-        # Placeholder for future DB init
         return None
 
 
@@ -44,7 +43,7 @@ class SFTService:
     _submissions: List[SFTSubmission] = []
     _window: Optional[SFTWindow] = None
 
-    # ---------- SFT WINDOW (IC CONTROL) ----------
+    # ---------- WINDOW CONTROL ----------
 
     @classmethod
     def set_window(cls, date: str, start: str, end: str):
@@ -58,17 +57,7 @@ class SFTService:
     def clear_window(cls):
         cls._window = None
 
-    # ---------- INTERNAL TIME HELPERS ----------
-
-    @staticmethod
-    def _to_minutes(t: str) -> int:
-        return int(t[:2]) * 60 + int(t[2:])
-
-    # ---------- SUBMISSION CONTROL ----------
-
-    @classmethod
-    def can_submit(cls) -> bool:
-        return cls._window is not None
+    # ---------- SUBMISSIONS ----------
 
     @classmethod
     def add_submission(
@@ -82,32 +71,6 @@ class SFTService:
     ):
         if not cls._window:
             raise ValueError("SFT window not set")
-
-        # Convert to minutes
-        w_start = cls._to_minutes(cls._window.start)
-        w_end = cls._to_minutes(cls._window.end)
-        s_start = cls._to_minutes(start)
-        s_end = cls._to_minutes(end)
-
-        # ---------- VALIDATION ----------
-
-        # Time must be within window
-        if not (w_start <= s_start < s_end <= w_end):
-            raise ValueError("Selected time is outside SFT window")
-
-        # One pax per activity
-        for s in cls._submissions:
-            if s.date == cls._window.date and s.activity == activity:
-                raise ValueError(
-                    f"Activity '{activity}' already has a participant"
-                )
-
-        # One submission per user (recommended)
-        for s in cls._submissions:
-            if s.date == cls._window.date and s.user_id == user_id:
-                raise ValueError("You have already submitted SFT")
-
-        # ---------- SAVE ----------
 
         cls._submissions.append(
             SFTSubmission(
@@ -127,33 +90,56 @@ class SFTService:
             s for s in cls._submissions if s.user_id != user_id
         ]
 
-    # ---------- QUERYING ----------
-
-    @classmethod
-    def get_submissions_by_date(cls, date: str) -> List[SFTSubmission]:
-        return [s for s in cls._submissions if s.date == date]
+    # ---------- SUMMARY GENERATION ----------
 
     @classmethod
     def generate_summary(cls, date: str) -> str:
         grouped = defaultdict(list)
 
-        for submission in cls._submissions:
-            if submission.date != date:
+        for s in cls._submissions:
+            if s.date != date:
                 continue
-            key = f"{submission.activity} @ {submission.location}"
-            grouped[key].append(submission)
+            key = f"{s.activity} @ {s.location}"
+            grouped[key].append(s)
 
         if not grouped:
-            return f"No SFT submissions for {date}."
+            return f"❌ No SFT submissions for {date}."
 
+        # 🚨 VALIDATION: each activity must have >= 2 pax
+        invalid = [
+            activity
+            for activity, entries in grouped.items()
+            if len(entries) < 2
+        ]
+
+        if invalid:
+            lines = [
+                "❌ SFT summary cannot be generated.",
+                "",
+                "The following activities have fewer than 2 participants:",
+            ]
+            for a in invalid:
+                lines.append(f"- {a}")
+            lines.append("")
+            lines.append("Please resolve before generating summary.")
+            return "\n".join(lines)
+
+        # ✅ VALID → build summary
         lines = [f"SFT Summary ({date})"]
 
         for activity, entries in grouped.items():
             lines.append(f"\n{activity}:")
-            for idx, entry in enumerate(entries, 1):
+            for idx, e in enumerate(entries, 1):
                 lines.append(
-                    f"{idx}. {entry.user_name} "
-                    f"{entry.start}-{entry.end}"
+                    f"{idx}. {e.user_name} {e.start}-{e.end}"
                 )
 
         return "\n".join(lines)
+
+
+# =========================
+# FUNCTIONAL EXPORT
+# =========================
+
+def get_sft_window():
+    return SFTService.get_window()
