@@ -1,8 +1,17 @@
 from config.settings import BOT_TOKEN
-from bot.commands import start, start_sft, start_movement
-from bot.callbacks import callback_router, text_input_router
-from bot.cet import cet_handler
 from services.db_service import DatabaseService
+
+from bot.commands import (
+    start,
+    start_sft,
+    start_movement,
+)
+
+from bot.callbacks import (
+    callback_router,
+    text_input_router,
+)
+
 from utils.time_utils import SG_TZ, DAILY_MSG_TIME
 from bot.daily_msg import send_daily_msg
 
@@ -24,7 +33,7 @@ def main():
     DatabaseService.initialise()
 
     # -----------------------------
-    # Initialise Telegram Application
+    # Build Telegram Application
     # -----------------------------
     application = (
         ApplicationBuilder()
@@ -33,23 +42,27 @@ def main():
     )
 
     # -----------------------------
-    # Handlers
+    # Command Handlers
     # -----------------------------
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("start_sft", start_sft))
     application.add_handler(CommandHandler("start_movement", start_movement))
 
+    # -----------------------------
+    # Callback Handlers (Buttons)
+    # -----------------------------
     application.add_handler(CallbackQueryHandler(callback_router))
 
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, cet_handler)
-    )
+    # -----------------------------
+    # Text Input Handler
+    # (movement manual time, etc.)
+    # -----------------------------
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
     )
 
     # -----------------------------
-    # Job Queue (timezone + daily job)
+    # Job Queue (Daily Message)
     # -----------------------------
     application.job_queue.scheduler.timezone = SG_TZ
     application.job_queue.run_daily(
@@ -58,7 +71,7 @@ def main():
     )
 
     # -----------------------------
-    # Start Bot (PTB manages loop)
+    # Start Bot (Polling)
     # -----------------------------
     application.run_polling(
         drop_pending_updates=True,
