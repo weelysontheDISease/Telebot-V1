@@ -7,13 +7,16 @@ from telegram.ext import (
     CallbackContext
 )
 
-from config.constants import NAMES, instructor_list
 
-from db.crud import (get_user_records, update_user_record, create_user_record, get_ma_records, create_ma_record, update_ma_record, get_user_rsi_records, create_rsi_record, update_rsi_record)
 
-from helpers import reply
+from db.crud import (get_user_records, update_user_record, create_user_record, get_ma_records, create_ma_record, update_ma_record, get_user_rsi_records, create_rsi_record, update_rsi_record,get_all_cadet_names,get_all_instructor_names)
+
+from bot.helpers import reply
 
 # ------------ Common Utility Functions ------------ #
+
+NAMES = get_all_cadet_names()
+instructor_list = get_all_instructor_names()
 
 def set_mode(context: CallbackContext, mode: str):
     context.user_data.clear()
@@ -74,10 +77,10 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
             return
 
         latest_record = records[-1]
-        context.user_data["symptoms"] = latest_record.get("symptoms", "")
-        context.user_data["diagnosis"] = latest_record.get("diagnosis", "")
-        context.user_data["status"] = latest_record.get("status", "")
-        context.user_data["record_id"] = latest_record.get("id")
+        context.user_data["symptoms"] = getattr(latest_record, "symptoms", "")
+        context.user_data["diagnosis"] = getattr(latest_record, "diagnosis", "")
+        context.user_data["status"] = getattr(latest_record, "status", "")
+        context.user_data["record_id"] = getattr(latest_record, "id", None)
         reply(update, f"Updating report for {name}. What is your diagnosis?")
         return
 
@@ -90,11 +93,11 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
             return
 
         latest_record = user_records[-1]
-        context.user_data["appointment"] = latest_record.get("appointment", "")
-        context.user_data["appointment_location"] = latest_record.get("appointment_location", "")
-        context.user_data["appointment_date"] = latest_record.get("appointment_date", "")
-        context.user_data["appointment_time"] = latest_record.get("appointment_time", "")
-        context.user_data["record_id"] = latest_record.get("id")
+        context.user_data["appointment"] = getattr(latest_record, "appointment", "")
+        context.user_data["appointment_location"] = getattr(latest_record, "appointment_location", "")
+        context.user_data["appointment_date"] = getattr(latest_record, "appointment_date", "")
+        context.user_data["appointment_time"] = getattr(latest_record, "appointment_time", "")
+        context.user_data["record_id"] = getattr(latest_record, "id", None)
 
         keyboard = [[InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
                     for instructor in instructor_list]
@@ -110,13 +113,13 @@ def name_selection_handler(update: Update, context: CallbackContext):  # manual 
             return
 
         latest_record = records[-1]
-        context.user_data["record_id"] = latest_record.get("id")
-        context.user_data["symptoms"] = latest_record.get("symptoms", "")
+        context.user_data["record_id"] = getattr(latest_record, "id", None)
+        context.user_data["symptoms"] = getattr(latest_record, "symptoms", "")
         context.user_data["awaiting_rsi_diagnosis"] = True
         reply(update, f"Updating RSI report for {name}. What is your diagnosis?")
         return
 
-def manual_input_handler(update: Update, context: CallbackContext):
+async def manual_input_handler(update: Update, context: CallbackContext):
     if not update.message:
         return
 
@@ -146,14 +149,6 @@ def manual_input_handler(update: Update, context: CallbackContext):
 
     if context.user_data.get("mode") == "update":
         if context.user_data.get("awaiting_diagnosis"):
-            # Validate diagnosis: not empty and reasonable length
-            if len(user_input) < 2:
-                reply(update, "Diagnosis must be at least 2 characters. Please try again.")
-                return
-            if len(user_input) > 200:
-                reply(update, "Diagnosis too long (max 200 characters). Please be more concise.")
-                return
-
             context.user_data['diagnosis'] = user_input.upper()
             context.user_data['awaiting_diagnosis'] = False
             context.user_data['awaiting_mc_days'] = True
@@ -199,8 +194,8 @@ def manual_input_handler(update: Update, context: CallbackContext):
             if len(user_input) < 2:
                 reply(update, "Appointment type must be at least 2 characters. Please try again.")
                 return
-            if len(user_input) > 100:
-                reply(update, "Appointment type too long (max 100 characters). Please be more concise.")
+            if len(user_input) > 200:
+                reply(update, "Appointment type too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['appointment'] = user_input.upper()
@@ -217,8 +212,8 @@ def manual_input_handler(update: Update, context: CallbackContext):
             if len(user_input) < 2:
                 reply(update, "Location must be at least 2 characters. Please try again.")
                 return
-            if len(user_input) > 100:
-                reply(update, "Location too long (max 100 characters). Please be more concise.")
+            if len(user_input) > 200:
+                reply(update, "Location too long (max 200 characters). Please be more concise.")
                 return
 
             context.user_data['appointment_location'] = user_input.upper()
@@ -250,7 +245,12 @@ def manual_input_handler(update: Update, context: CallbackContext):
                     return
 
                 # Try to parse the date to ensure it's valid
-                datetime.strptime(user_input, "%d%m%y")
+                appointment_date = datetime.strptime(user_input, "%d%m%y").date()
+
+                # Check if date is in the past
+                if appointment_date < datetime.now().date():
+                    reply(update, "Appointment date cannot be in the past. Please enter a future date.")
+                    return
             except ValueError:
                 reply(update, "Invalid date. Please enter a valid date in DDMMYY format.")
                 return
@@ -411,9 +411,10 @@ def show_preview_summary(update: Update, context: CallbackContext):
     if status != '':
         number_days = context.user_data.get('number_of_mc_days', 0)
         start_date = datetime.now().date().strftime("%d%m%y")
+        end_date = start_date  # Initialize end_date same as start_date
         if number_days and number_days > 0:
             end_date = (datetime.now().date() + timedelta(days=number_days - 1)).strftime("%d%m%y")
-            status += f" ({start_date}-{end_date})"
+        status += f" ({start_date}-{end_date})"
         context.user_data['start_date'] = start_date
         context.user_data['end_date'] = end_date
 
@@ -459,8 +460,7 @@ def confirm_handler(update: Update, context: CallbackContext):
         create_user_record(
             name=name,
             symptoms=symptoms,
-            diagnosis=diagnosis,
-            status=status
+            diagnosis=diagnosis
         )
         # Add logic to send to IC Chat
     elif context.user_data.get("mode") == "update":
@@ -468,6 +468,7 @@ def confirm_handler(update: Update, context: CallbackContext):
         record_id = context.user_data.get('record_id')
         update_user_record(
             record_id=record_id,
+            symptoms=symptoms,
             diagnosis=diagnosis,
             status=status,
             start_date=start_date,
@@ -562,7 +563,7 @@ def confirm_ma_handler(update: Update, context: CallbackContext):
 
 
 
-def update_endorsed(update:Update, context:CallbackContext):
+def update_endorsed(update: Update, context: CallbackContext):
     """Start the update endorsed process - select name first"""
     prompt_name_selection(update, context, "update_ma", "Select your name to update MA endorsement:", "update_ma_name")
 
@@ -597,7 +598,7 @@ def show_ma_update_summary(update: Update, context: CallbackContext):
     appointment_time = context.user_data.get('appointment_time', 'N/A')
     instructor = context.user_data.get('instructor', 'N/A')
 
-    summary = f"NAME: {name}\n"
+    summary = f"{name}\n"
     summary += f"NAME: {appointment}\n"
     summary += f"LOCATION: {appointment_location}\n"
     summary += f"DATE: {appointment_date}\n"
