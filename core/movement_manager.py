@@ -3,7 +3,6 @@ import pytz
 import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
 from bot.helpers import reply
 from config.constants import IC_GROUP_CHAT_ID, MOVEMENT_TOPIC_ID, LOCATIONS
 
@@ -14,9 +13,12 @@ def is_valid_time(value: str) -> bool:
     return bool(re.fullmatch(r"([01][0-9]|2[0-3])[0-5][0-9]", value))
 
 
-def handle_movement_callback(update, context):
+# =========================
+# CALLBACK HANDLER
+# =========================
+async def handle_movement_callback(update, context):
     query = update.callback_query
-    query.answer()
+    await query.answer()
     data = query.data
 
     # ------------------------------
@@ -42,21 +44,21 @@ def handle_movement_callback(update, context):
             [InlineKeyboardButton("✅ Done Selecting", callback_data="move_done")]
         )
 
-        reply(update, "Select personnel moving:", InlineKeyboardMarkup(keyboard))
+        await reply(update, "Select personnel moving:", InlineKeyboardMarkup(keyboard))
 
     # ------------------------------
     # DONE SELECTING
     # ------------------------------
     elif data == "move_done":
         if not context.user_data.get("selected"):
-            query.answer("Select at least one name!", show_alert=True)
+            await query.answer("Select at least one name!", show_alert=True)
             return
 
         keyboard = [
             [InlineKeyboardButton(loc, callback_data=f"move_from|{loc}")]
             for loc in LOCATIONS
         ]
-        reply(update, "Select movement FROM:", InlineKeyboardMarkup(keyboard))
+        await reply(update, "Select movement FROM:", InlineKeyboardMarkup(keyboard))
 
     # ------------------------------
     # FROM LOCATION
@@ -68,7 +70,7 @@ def handle_movement_callback(update, context):
             [InlineKeyboardButton(loc, callback_data=f"move_to|{loc}")]
             for loc in LOCATIONS
         ]
-        reply(update, "Select movement TO:", InlineKeyboardMarkup(keyboard))
+        await reply(update, "Select movement TO:", InlineKeyboardMarkup(keyboard))
 
     # ------------------------------
     # TO LOCATION
@@ -78,7 +80,7 @@ def handle_movement_callback(update, context):
         from_loc = context.user_data["from"]
 
         if to_loc == from_loc:
-            query.answer("FROM and TO cannot be the same!", show_alert=True)
+            await query.answer("FROM and TO cannot be the same!", show_alert=True)
             return
 
         context.user_data["to"] = to_loc
@@ -87,7 +89,7 @@ def handle_movement_callback(update, context):
             [InlineKeyboardButton("⏱ Use current time", callback_data="move_time|auto")],
             [InlineKeyboardButton("⌨️ Enter time manually", callback_data="move_time|manual")],
         ]
-        reply(update, "Select movement time:", InlineKeyboardMarkup(keyboard))
+        await reply(update, "Select movement time:", InlineKeyboardMarkup(keyboard))
 
     # ------------------------------
     # TIME CHOICE
@@ -97,32 +99,39 @@ def handle_movement_callback(update, context):
 
         if choice == "auto":
             context.user_data["time"] = datetime.now(SG_TZ).strftime("%H%M")
-            _show_preview(update, context)
-
+            await _show_preview(update, context)
         else:
             context.user_data["awaiting_time"] = True
-            reply(update, "Enter time in HHMM (24h):")
+            await reply(update, "Enter time in HHMM (24h):")
+
     elif data == "move_confirm":
-        handle_movement_confirm(update, context)
+        await handle_movement_confirm(update, context)
+
     elif data == "move_cancel":
-        reply(update, "❌ Movement report cancelled.")
+        await reply(update, "❌ Movement report cancelled.")
 
 
-def handle_manual_time(update, context):
+# =========================
+# MANUAL TIME INPUT
+# =========================
+async def handle_manual_time(update, context):
     if not context.user_data.get("awaiting_time"):
         return
 
     value = update.message.text.strip()
     if not is_valid_time(value):
-        reply(update, "❌ Invalid time. Use HHMM.")
+        await reply(update, "❌ Invalid time. Use HHMM.")
         return
 
     context.user_data["awaiting_time"] = False
     context.user_data["time"] = value
-    _show_preview(update, context)
+    await _show_preview(update, context)
 
 
-def _show_preview(update, context):
+# =========================
+# PREVIEW
+# =========================
+async def _show_preview(update, context):
     names = sorted(context.user_data["selected"])
     from_loc = context.user_data["from"]
     to_loc = context.user_data["to"]
@@ -141,7 +150,7 @@ def _show_preview(update, context):
         InlineKeyboardButton("❌ Cancel", callback_data="move_cancel"),
     ]]
 
-    reply(
+    await reply(
         update,
         "📋 *Preview Movement Report*\n\n" + msg,
         InlineKeyboardMarkup(keyboard),
@@ -149,10 +158,13 @@ def _show_preview(update, context):
     )
 
 
-def handle_movement_confirm(update, context):
-    context.bot.send_message(
+# =========================
+# CONFIRM SEND
+# =========================
+async def handle_movement_confirm(update, context):
+    await context.bot.send_message(
         chat_id=IC_GROUP_CHAT_ID,
         message_thread_id=MOVEMENT_TOPIC_ID,
         text=context.user_data["final_message"],
     )
-    reply(update, "✅ Movement report sent.")
+    await reply(update, "✅ Movement report sent.")
