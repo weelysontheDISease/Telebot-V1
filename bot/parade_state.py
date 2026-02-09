@@ -58,8 +58,8 @@ def format_ma(events):
 		final_text += f"""{i+1}. {user.rank} {user.full_name}
 a. NAME: {medical_event.appointment_type}
 LOCATION: {medical_event.location}
-DATE: {medical_event.event_date}
-TIME OF APPOINTMENT: {medical_event.event_time}
+DATE: {medical_event.event_datetime.strftime("%d%m%y")}
+TIME OF APPOINTMENT: {medical_event.event_datetime.strftime("%H%M")}
 ENDORSED BY: {endorsed_by}
 
 """
@@ -196,7 +196,6 @@ MA: {ma_count:02d}
 
 RSI : {rsi_count:02d}
 {rsi_text.rstrip()}
-
 
 RSO : {rso_count:02d}
 {rso_text.rstrip()}
