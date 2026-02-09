@@ -82,3 +82,18 @@ async def start_status(update, context):
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
+
+
+# =========================
+# PARADE STATE ENTRY POINT
+# =========================
+async def start_parade_state(update, context):
+	"""Entry point for parade state generation"""
+	context.user_data.clear()
+	context.user_data["mode"] = "PARADE_STATE"
+
+	await reply(
+		update,
+		"📋Parade State started.\n\n"
+		"Please input the number of out-of-camp personnel:"
+	)
