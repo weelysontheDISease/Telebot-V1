@@ -128,11 +128,11 @@ async def generate_parade_state(update, context):
 	out_of_camp = int(out_of_camp)
 
 	current_datetime = datetime.now()
-	current_time = current_datetime.time().strftime('%H%M')
-	current_date = current_datetime.date().strftime('%Y-%m-%d')
+	current_time = current_datetime.time()
+	current_date = current_datetime.date()
 
 	all_medical_events = crud.get_medical_events()
-	all_medical_statuses = crud.get_active_statuses(current_date)
+	all_medical_statuses = crud.get_active_statuses(current_date.strftime('%Y-%m-%d'))
 	all_cadets = crud.get_all_cadets()
 	active_medical_events = [item for item in all_medical_events if item[0].diagnosis == "" or item[0].diagnosis == None]
 	categorised_medical_events = categorise_medical_events(active_medical_events)
@@ -184,7 +184,7 @@ async def generate_parade_state(update, context):
 	current_strength = total_strength - out_of_camp
 	
 	parade_state_text = f"""
-DIS WING 14/26 PRE-MDST PARADE STATE {current_date}, {current_time}H
+DIS WING 14/26 PRE-MDST PARADE STATE {current_date.strftime('%y%m%d')}, {current_time.strftime('%H%M')}H
 -------------------------------------------------------- 
 
 TOTAL STRENGTH: {total_strength}
