@@ -50,7 +50,7 @@ def format_ma(events):
 		medical_event = event[0]
 		user = event[1]
 
-		if medical_event.endorsed_by == None:
+		if medical_event.endorsed_by is None:
 			endorsed_by = ""
 		else:
 			endorsed_by = medical_event.endorsed_by
@@ -99,9 +99,9 @@ def format_status(statuses):
 		status_type = medical_status.status_type
 		if status_type == "LD":
 			status_type = "LIGHT DUTY"
-		if status_type == "EUL":
+		elif status_type == "EUL":
 			status_type = "EXCUSED UPPER LIMB"
-		if status_type == "RMJ":
+		elif status_type == "RMJ":
 			status_type = "EXCUSED RUNNING, MARCHING, JUMPING"
 
 		final_text += f"""{i+1}. {user.rank} {user.full_name}
@@ -120,6 +120,13 @@ def count_temp_statuses(temp_statuses):
 
 async def generate_parade_state(update, context):
 	"""Generates the current parade state"""
+
+	out_of_camp = update.message.text.strip()
+	if not out_of_camp.isdigit():
+		await update.message.reply_text("❌ Numbers only.")
+		return
+	out_of_camp = int(out_of_camp)
+	print(out_of_camp)
 
 	current_datetime = datetime.now()
 	current_time = current_datetime.time().strftime('%H%M')
@@ -175,7 +182,6 @@ async def generate_parade_state(update, context):
 	others_count = permstatus_count = 0
 	
 	total_strength = len(all_cadets)
-	out_of_camp = 0
 	current_strength = total_strength - out_of_camp
 	
 	parade_state_text = f"""
@@ -218,6 +224,9 @@ STATUSES: {temp_status_count:02d}
 PERMANENT STATUS: {permstatus_count:02d}
 {permstatus_text.rstrip()}
 """
+	if len(parade_state_text) > 4096:
+		parade_state_text = parade_state_text[:4000] + "\n\n Output truncated: parade_state_text too long."
+
 	await context.bot.send_message(
 		chat_id=update.effective_chat.id, 
 		text=parade_state_text
