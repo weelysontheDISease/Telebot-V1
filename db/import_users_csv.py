@@ -46,6 +46,15 @@ def _normalize_username(value):
         name = name[1:]
     return name or None
 
+def _normalize_header(value):
+    if value is None:
+        return ""
+    text = str(value).strip().lower()
+    if text.endswith(":"):
+        text = text[:-1].strip()
+    text = text.replace("-", " ").replace("  ", " ")
+    return "_".join(text.split())
+
 def import_users(path, require_username=False):
     session = SessionLocal()
     created = 0
@@ -54,7 +63,10 @@ def import_users(path, require_username=False):
     try:
         with open(path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            header_fields = set(reader.fieldnames or [])
+            normalized_fieldnames = [
+                _normalize_header(name) for name in (reader.fieldnames or [])
+            ]
+            header_fields = set(normalized_fieldnames)
             if not REQUIRED.issubset(header_fields):
                 raise ValueError(f"Missing columns: {REQUIRED - header_fields}")
             if "telegram_id" not in header_fields and "telegram_username" not in header_fields:
@@ -64,7 +76,10 @@ def import_users(path, require_username=False):
 
             for row in reader:
                 processed += 1
-                telegram_id_raw = (row.get("telegram_id") or "").strip()
+                normalized_row = {
+                    _normalize_header(key): value for key, value in row.items()
+                }
+                telegram_id_raw = (normalized_row.get("telegram_id") or "").strip()
                 telegram_id = None
                 if telegram_id_raw:
                     try:
@@ -72,38 +87,41 @@ def import_users(path, require_username=False):
                     except ValueError:
                         raise ValueError(f"telegram_id must be a valid integer: {telegram_id_raw!r}")
 
-                telegram_username = _normalize_username(row.get("telegram_username"))
+                telegram_username = _normalize_username(
+                    normalized_row.get("telegram_username")
+                )
                 if telegram_id is None and not telegram_username:
                     raise ValueError("Each row must include telegram_id or telegram_username")
                 if require_username and not telegram_username:
                     raise ValueError("Each row must include telegram_username")
 
-                full_name = (row.get("full_name") or "").strip()
+                full_name = (normalized_row.get("full_name") or "").strip()
                 if not _require_full_caps(full_name):
                     raise ValueError(f"full_name must be FULL CAPS with no leading/trailing spaces: {full_name!r}")
 
-                rank = (row.get("rank") or "").strip().upper()
+                rank = (normalized_row.get("rank") or "").strip().upper()
                 if not rank:
                     raise ValueError("rank is required and cannot be empty")
                 if rank not in ALLOWED_RANKS:
                     raise ValueError(f"rank must be a valid SAF rank: {rank!r}")
 
-                role_raw = (row.get("role") or "").strip().lower()
+                role_raw = (normalized_row.get("role") or "").strip().lower()
                 if role_raw not in ROLE_MAP:
-                    raise ValueError(f"role must be one of {sorted(ROLE_MAP.values())}: {row.get('role')!r}")
+                   raise ValueError(
+                        f"role must be one of {sorted(ROLE_MAP.values())}: {normalized_row.get('role')!r}"
+                    )
                 role = ROLE_MAP[role_raw]
 
-                is_admin = _parse_bool(row.get("is_admin"))
+                is_admin = _parse_bool(normalized_row.get("is_admin"))
                 if role == "Admin":
-                    base_role_raw = (row.get("base_role") or "").strip().lower()
+                    base_role_raw = (normalized_row.get("base_role") or "").strip().lower()
                     if not base_role_raw:
                         raise ValueError(
                             "role=Admin requires base_role column set to Instructor or Cadet"
                         )
                     if base_role_raw not in ROLE_MAP or ROLE_MAP[base_role_raw] not in BASE_ROLES:
                         raise ValueError(
-                            f"base_role must be Instructor or Cadet when role=Admin: {row.get('base_role')!r}"
-                        )
+                            f"base_role must be Instructor or Cadet when role=Admin: {normalized_row.get('base_role')!r}")
                     role = ROLE_MAP[base_role_raw]
                     is_admin = True
                 if is_admin and role not in BASE_ROLES:
@@ -129,7 +147,8 @@ def import_users(path, require_username=False):
                 user.rank = rank
                 user.role = role
                 user.is_admin = is_admin
-                user.is_active = (row.get("is_active", "true").lower() != "false")
+                is_active = normalized_row.get("is_active", "true")
+                user.is_active = str(is_active).lower() != "false"
 
         session.commit()
         return {"processed": processed, "created": created, "updated": updated}

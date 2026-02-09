@@ -166,7 +166,14 @@ async def _handle_import_csv(update, context, clear_first: bool):
     try:
         file = await context.bot.get_file(document.file_id)
         await file.download_to_drive(tmp_path)
-        result = import_users(tmp_path)
+        try:
+            result = import_users(tmp_path)
+        except ValueError as exc:
+            await reply(update, f"❌ Import failed: {exc}")
+            return
+        except Exception:
+            await reply(update, "❌ Import failed due to an unexpected error.")
+            return
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -178,6 +185,7 @@ async def _handle_import_csv(update, context, clear_first: bool):
         f"created: {result['created']}, "
         f"updated: {result['updated']}.",
     )
+
 
 
 async def import_user(update, context):
