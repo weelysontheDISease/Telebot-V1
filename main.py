@@ -32,10 +32,11 @@ async def main():
     application = (
         ApplicationBuilder()
         .token(BOT_TOKEN)
-        .timezone(SG_TZ)
         .build()
     )
 
+    # Set timezone for scheduled jobs
+    application.job_queue.scheduler.timezone = SG_TZ
     # -----------------------------
     # Command Handlers
     # -----------------------------
