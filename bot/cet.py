@@ -21,5 +21,6 @@ def cet_handler(update, context):
             from_chat_id = msg.chat_id,
             message_id = msg.message_id
         )
-    
-        print(f"--- {msg.text.split("\n")[0]} sent ---")
+
+        cet_title = msg.text.split("\n")[0]
+        print(f"--- {cet_title} sent ---")
