@@ -1,5 +1,6 @@
 from config.settings import BOT_TOKEN
 from services.db_service import DatabaseService
+from bot.cet import cet_handler
 
 from bot.commands import (
     start,
@@ -27,7 +28,6 @@ from config.settings import BOT_TOKEN
 from bot.commands import (
     start_sft,
     start_movement,
-    start_cet,
     start_status,
     start_parade_state
 )
@@ -63,6 +63,8 @@ def main():
     # -----------------------------
     # Command Handlers
     # -----------------------------
+
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, cet_handler))
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("start_sft", start_sft))
     application.add_handler(CommandHandler("start_status", start_status))
