@@ -28,17 +28,14 @@ async def callback_router(update, context):
 # =========================
 # TEXT INPUT ROUTER
 # =========================
-
-def text_input_router(update, context):
+async def text_input_router(update, context):
     mode = context.user_data.get("mode")
 
     if mode == "MOVEMENT":
-        movement_text_input(update, context)
-        return
-
-    if mode in {"report", "update", "ma_report", "rsi_report", "rsi_update", "update_ma"}:
+        await movement_text_input(update, context)
+    elif mode in {"report", "update", "ma_report", "rsi_report", "rsi_update", "update_ma"}:
         from bot.rso_handler import manual_input_handler
-        manual_input_handler(update, context)
+        await manual_input_handler(update, context)
 
 # =========================
 # STATUS MENU HANDLER
@@ -97,16 +94,6 @@ def register_status_handlers(dispatcher):
     dispatcher.add_handler(CallbackQueryHandler(rsi_status_type_handler, pattern=r"^rsi_type\|"))
     dispatcher.add_handler(CallbackQueryHandler(confirm_rsi_report_handler, pattern=r"^confirm_rsi_report$"))
     dispatcher.add_handler(CallbackQueryHandler(confirm_rsi_update_handler, pattern=r"^confirm_rsi_update$"))
-
-# =========================
-# TEXT INPUT ROUTER
-# =========================
-async def text_input_router(update, context):
-    mode = context.user_data.get("mode")
-
-    if mode == "MOVEMENT":
-        await movement_text_input(update, context)
-
 
 # =========================
 # MOVEMENT CALLBACKS
