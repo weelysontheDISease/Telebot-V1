@@ -6,6 +6,7 @@ from bot.commands import (
     start_sft,
     start_movement,
     start_status,
+    start_parade_state
 )
 
 from bot.callbacks import (
@@ -54,6 +55,7 @@ def main():
     application.add_handler(CommandHandler("start_sft", start_sft))
     application.add_handler(CommandHandler("start_status", start_status))
     application.add_handler(CommandHandler("start_movement", start_movement))
+    application.add_handler(CommandHandler("start_parade_state", start_parade_state))
     register_status_handlers(application)
 
 
