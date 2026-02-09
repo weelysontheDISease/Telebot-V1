@@ -1,6 +1,5 @@
 from config.settings import BOT_TOKEN
 from services.db_service import DatabaseService
-from bot.cet import cet_handler
 
 from bot.commands import (
     start,
@@ -12,10 +11,13 @@ from bot.commands import (
 from bot.callbacks import (
     callback_router,
     text_input_router,
+    register_status_handlers,
 )
 
-from utils.time_utils import SG_TZ, DAILY_MSG_TIME
+from bot.cet import cet_handler
 from bot.daily_msg import send_daily_msg
+
+from utils.time_utils import SG_TZ, DAILY_MSG_TIME
 
 from telegram.ext import (
     ApplicationBuilder,
@@ -24,22 +26,6 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-
-from config.settings import BOT_TOKEN
-from bot.commands import (
-    start_sft,
-    start_movement
-)
-from bot.callbacks import (
-    callback_router,
-    text_input_router,
-    register_status_handlers
-)
-
-from config.settings import BOT_TOKEN
-from bot.commands import start, start_sft, start_movement
-from bot.callbacks import callback_router, text_input_router
-from services.db_service import DatabaseService
 
 
 def main():
