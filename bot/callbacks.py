@@ -61,8 +61,14 @@ async def text_input_router(update, context):
 
     if mode == "MOVEMENT":
         await movement_text_input(update, context)
+        return
 
-    elif mode in {
+    if mode == "PT_SFT_ADMIN":
+        from core.pt_sft_admin import handle_pt_sft_admin_text
+        await handle_pt_sft_admin_text(update, context)
+        return
+    
+    if mode in {
         "report",
         "update",
         "ma_report",
