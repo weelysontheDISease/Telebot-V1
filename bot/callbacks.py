@@ -41,32 +41,32 @@ async def text_input_router(update, context):
 # STATUS MENU HANDLER
 # =========================
 
-def status_menu_handler(update, context):
+async def status_menu_handler(update, context):
     query = update.callback_query
-    query.answer()
+    await query.answer()
     _, action = query.data.split("|", 1)
 
     if action == "report_rso":
         from bot.rso_handler import start_status_report
-        start_status_report(update, context)
+        await start_status_report(update, context)
     elif action == "update_rso":
         from bot.rso_handler import start_update_status
-        start_update_status(update, context)
+        await start_update_status(update, context)
     elif action == "report_ma":
         from bot.rso_handler import start_ma_report
-        start_ma_report(update, context)
+        await start_ma_report(update, context)
     elif action == "update_ma":
         from bot.rso_handler import update_endorsed
-        update_endorsed(update, context)
+        await update_endorsed(update, context)
     elif action == "report_rsi":
         from bot.rso_handler import start_rsi_report
-        start_rsi_report(update, context)
+        await start_rsi_report(update, context)
     elif action == "update_rsi":
         from bot.rso_handler import start_update_rsi
-        start_update_rsi(update, context)
+        await start_update_rsi(update, context)
     elif action == "cancel":
         context.user_data.clear()
-        reply(update, "❌ Cancelled. Use /start_status to begin again.")
+        await reply(update, "❌ Cancelled. Use /start_status to begin again.")
 
 
 def register_status_handlers(dispatcher):
