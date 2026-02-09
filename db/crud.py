@@ -23,7 +23,6 @@ def _normalize_username(value: str | None):
         name = name[1:]
     return name or None
 
-
 def create_user(
     full_name: str,
     rank: str,
@@ -120,11 +119,18 @@ def create_medical_status(
     db.refresh(status)
     return status
 
-def get_active_statuses(target_date: date):
-    """Retrieve all medical statuses active on the target_date."""
-    return db.query(MedicalStatus).filter(
-        MedicalStatus.start_date <= target_date,
-        MedicalStatus.end_date >= target_date
+def get_active_statuses(today):
+    return db.query(
+        MedicalStatus,
+        User,
+        MedicalEvent,
+        ).join(
+            User, MedicalStatus.user_id == User.id
+		).join(
+			MedicalEvent, MedicalStatus.source_event_id == MedicalEvent.id
+		).filter(
+        MedicalStatus.start_date <= today,
+        MedicalStatus.end_date >= today
     ).all()
 
 def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
@@ -145,6 +151,7 @@ def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
         raise
     finally:
         session.close()
+        
 # ---------- Medical Events ----------
 
 # RSO Records
@@ -302,3 +309,18 @@ def update_rsi_record(
         db.commit()
         db.refresh(record)
     return record
+
+
+# Other Queries
+def get_medical_events():
+    return db.query(
+        MedicalEvent,
+        User
+	).join(
+		User, MedicalEvent.user_id == User.id
+    ).all()
+
+def get_all_cadets():
+    return db.query(User).filter(
+        User.role == "cadet"
+	).all()
