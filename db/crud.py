@@ -131,3 +131,85 @@ def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
         raise
     finally:
         session.close()
+# ---------- Medical Events ----------
+
+def get_user_records(name: str):
+    return db.query(MedicalEvent).join(User).filter(User.full_name == name,MedicalEvent.event_type == "RSO").all()
+
+def update_user_record(record_id: int, symptoms: str, diagnosis: str):
+    record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
+    if record:
+        record.symptoms = symptoms
+        record.diagnosis = diagnosis
+        db.commit()
+        db.refresh(record)
+    return record
+
+def create_user_record(
+    name: str,
+    symptoms: str,
+    diagnosis: str,
+    status: str
+):
+    user = db.query(User).filter(User.full_name == name).first()
+    if not user:
+        raise ValueError("User not found")
+
+    event = MedicalEvent(
+        user_id=user.id,
+        event_type="RSO",
+        symptoms=symptoms,
+        diagnosis=diagnosis,
+        # start_datetime=datetime.now()
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+def get_ma_records(name: str):
+    return db.query(MedicalEvent).join(User).filter(User.full_name == name,MedicalEvent.event_type == "MA").all()
+
+def create_ma_record(
+    name: str,
+    appointment: str,
+    appointment_location: str,
+    appointment_date: str,
+    appointment_time: str
+):
+    user = db.query(User).filter(User.full_name == name).first()
+    if not user:
+        raise ValueError("User not found")
+
+    event = MedicalEvent(
+        user_id=user.id,
+        event_type="MA",
+        appointment_type=appointment,
+        location=appointment_location,
+        event_date=datetime.strptime(appointment_date, "%d%m%y").date(),
+        event_time=datetime.strptime(appointment_time, "%H%M").time()
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+def update_ma_record(
+    record_id: int,
+    appointment: str,
+    appointment_location: str,
+    appointment_date: str,
+    appointment_time: str,
+    instructor: str | None = None
+):
+    record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
+    if record:
+        record.appointment_type = appointment
+        record.location = appointment_location
+        record.event_date = datetime.strptime(appointment_date, "%d%m%y").date()
+        record.event_time = datetime.strptime(appointment_time, "%H%M").time()
+        if instructor:
+            record.endorsed_by = instructor
+        db.commit()
+        db.refresh(record)
+    return record

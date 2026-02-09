@@ -1,3 +1,5 @@
+import os
+
 # =========================
 # CHAT & TOPIC IDS
 # =========================
@@ -5,15 +7,20 @@
 # Instructors / IC Group (shared)
 IC_GROUP_CHAT_ID = -1003592356953
 
+# Admin user IDs (comma-separated) for restricted actions
+ADMIN_IDS = [
+    int(admin_id)
+    for admin_id in os.getenv("ADMIN_IDS", "").split(",")
+    if admin_id.strip()
+]
+
 # Topics in IC Group
 MOVEMENT_TOPIC_ID = 322
 SFT_TOPIC_ID = 7
 PARADE_STATE_TOPIC_ID = 3
 CET_TOPIC_ID = 2
 
-# =========================
-# CADET CHAT (CET)
-# =========================
+# Cadet Chat (CET)
 
 CADET_CHAT_ID = -1003675767444
 CADET_CET_TOPIC_ID = 5
@@ -134,3 +141,16 @@ PARADE_STATE_SEPARATOR = "-" * 56
 CET_KEYWORDS = [
     "CET"
 ]
+
+# =========================
+# DAILY MESSAG CONFIG
+# =========================
+
+# Daily messages to be sent on respective days
+DAILY_MSGS = {
+    "Monday" : "<b>Monday - MINDEF/SAF Mission</b> \nThe mission of MINDEF/SAF is to enhance Singapore's peace and security through deterrence and diplomacy, and should these fail, to secure a swift and decisive victory over the aggressor.",
+    "Tuesday" : "<b>Tuesday - DIS Mission</b> \nThe DIS will defend and dominate in the digital domain. As part of an integrated SAF, the DIS will enhance Singapore's security, from peace to war.",
+    "Wednesday" : "<b>Wednesday - Definition of SAF Leadership</b> \nLeadership is defined as the process of Influencing people to accomplish the mission, Inspiring their commitment, and Improving the organisation. ",
+    "Thursday" : "<b>Thursday - DIS Safety Messages</b>\n1. Safety is an Integral part of mission success.\n2. Zero accident is an achievable goal.\n3. Safety is an individual, team and command responsibility.",
+    "Friday" :  "<b>Friday - MINDEF/SAF Mission</b> \nThe mission of MINDEF/SAF is to enhance Singapore's peace and security through deterrence and diplomacy, and should these fail, to secure a swift and decisive victory over the aggressor."
+}
