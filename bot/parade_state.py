@@ -126,7 +126,6 @@ async def generate_parade_state(update, context):
 		await update.message.reply_text("❌ Numbers only.")
 		return
 	out_of_camp = int(out_of_camp)
-	print(out_of_camp)
 
 	current_datetime = datetime.now()
 	current_time = current_datetime.time().strftime('%H%M')
