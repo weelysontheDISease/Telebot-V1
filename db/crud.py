@@ -25,7 +25,36 @@ def get_admin_telegram_ids() -> list[int]:
         return [row[0] for row in rows]
     finally:
         session.close()
-        
+
+
+def get_admin_telegram_ids() -> list[int]:
+    session = SessionLocal()
+    try:
+        rows = session.query(User.telegram_id).filter(
+            User.is_admin.is_(True),
+            User.is_active.is_(True),
+            User.telegram_id.isnot(None),
+        ).all()
+        return [row[0] for row in rows]
+    finally:
+        session.close()
+
+def is_admin_user(user_id: int | None) -> bool:
+    if user_id is None:
+        return False
+
+    if user_id in ADMIN_IDS:
+        return True
+
+    user = get_user_by_telegram_id(user_id)
+    return bool(user and user.is_admin and user.is_active)
+
+
+def get_all_admin_user_ids() -> list[int]:
+    return sorted(set(ADMIN_IDS) | set(get_admin_telegram_ids()))
+
+
+
 def _normalize_username(value: str | None):
     if value is None:
         return None
