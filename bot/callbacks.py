@@ -222,6 +222,20 @@ async def handle_movement_callbacks(update, context):
         )
         return InlineKeyboardMarkup(keyboard)
 
+    def build_location_keyboard(prefix: str):
+        keyboard = [
+            [InlineKeyboardButton(location, callback_data=f"{prefix}|{location}")]
+            for location in LOCATIONS
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
+    def build_time_keyboard():
+        keyboard = [
+            [InlineKeyboardButton("🕒 Use current time", callback_data="mov:time|now")],
+            [InlineKeyboardButton("✍️ Enter time manually", callback_data="mov:time|manual")],
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
     if data.startswith("mov:name|"):
         _, name = data.split("|", 1)
         selected = context.user_data.setdefault("selected", set())
@@ -240,31 +254,83 @@ async def handle_movement_callbacks(update, context):
             await reply(update, "❌ Please select at least one cadet.")
             return
         context.user_data["awaiting_from"] = True
-        await reply(update, "📍 Where are they moving from?")
+        await reply(
+            update,
+            "📍 Where are they moving from?",
+            reply_markup=build_location_keyboard("mov:from"),
+        )
+        return
+
+    if data.startswith("mov:from|"):
+        _, from_loc = data.split("|", 1)
+        context.user_data["from"] = from_loc
+        context.user_data["awaiting_from"] = False
+        context.user_data["awaiting_to"] = True
+        await reply(
+            update,
+            "📍 Where are they moving to?",
+            reply_markup=build_location_keyboard("mov:to"),
+        )
+        return
+
+    if data.startswith("mov:to|"):
+        _, to_loc = data.split("|", 1)
+        context.user_data["to"] = to_loc
+        context.user_data["awaiting_to"] = False
+        context.user_data["awaiting_time"] = False
+        await reply(
+            update,
+            "⏰ Select the time:",
+            reply_markup=build_time_keyboard(),
+        )
+        return
+
+    if data == "mov:time|now":
+        time_hhmm = now_hhmm()
+        msg = ReportManager.build_movement_message(
+            names=context.user_data["selected"],
+            from_loc=context.user_data["from"],
+            to_loc=context.user_data["to"],
+            time_hhmm=time_hhmm,
+        )
+        context.user_data["final_message"] = msg
+        keyboard = [[
+            InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm")
+        ]]
+        await reply(
+            update,
+            "📋 Preview\n\n" + msg,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return
+
+    if data == "mov:time|manual":
+        context.user_data["awaiting_time"] = True
+        await reply(update, "⏰ Enter time manually (HHMM).")
         return
 
     if data == "mov:confirm":
         msg = context.user_data.get("final_message")
 
-        if not msg:
-            await reply(update, "❌ No movement data found.")
-            return
+    if not msg:
+        await reply(update, "❌ No movement data found.")
+        return
 
-        # Send to IC group
+    # Send to IC group
+    await context.bot.send_message(
+        chat_id=IC_GROUP_CHAT_ID,
+        message_thread_id=MOVEMENT_TOPIC_ID,
+        text=msg,
+    )
+
+    # Notify admins
+    for admin in ADMIN_IDS:
         await context.bot.send_message(
-            chat_id=IC_GROUP_CHAT_ID,
-            message_thread_id=MOVEMENT_TOPIC_ID,
-            text=msg,
+            chat_id=admin,
+            text="Movement report sent:\n\n" + msg,
         )
 
-        # Notify admins
-        for admin in ADMIN_IDS:
-            await context.bot.send_message(
-                chat_id=admin,
-                text="Movement report sent:\n\n" + msg,
-            )
-
-        await reply(update, "✅ Movement report sent.")
+    await reply(update, "✅ Movement report sent.")
 
 
 # ==================================================
