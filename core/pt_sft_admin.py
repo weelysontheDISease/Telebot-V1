@@ -65,14 +65,6 @@ async def start_pt_admin(update, context):
     context.user_data.clear()
     await _show_admin_menu(update, context)
 
-    await reply(
-        update,
-        "📋 *PT SFT Admin*\n\n"
-        "Please enter SFT time range in 24H format.\n"
-        "Example: `1500-1700`",
-        parse_mode="Markdown",
-    )
-
 
 # =========================
 # CALLBACK HANDLER
@@ -81,6 +73,8 @@ async def handle_pt_admin_callbacks(update, context):
     if update.effective_user.id not in ADMIN_IDS:
         await reply(update, "❌ You are not authorised.")
         return
+
+    context.user_data["mode"] = "PT_ADMIN"
 
     query = update.callback_query
     await query.answer()
@@ -185,6 +179,7 @@ async def handle_pt_admin_callbacks(update, context):
     if data == "ptadmin:menu":
         await _show_admin_menu(update, context)
 
+
 # =========================
 # TEXT HANDLER
 # =========================
@@ -213,9 +208,10 @@ async def handle_pt_admin_text(update, context):
         f"Date: {date}\n"
         f"Time: {start}-{end}\n\n"
         f"Cadets may now submit SFT.",
-        f"All previous SFT submissions have been cleared.",
         reply_markup=_admin_menu_keyboard(),
         parse_mode="Markdown",
     )
-    
+
     context.user_data["pt_admin_state"] = "menu"
+async def start_pt_sft_admin(update, context):
+    await start_pt_admin(update, context)

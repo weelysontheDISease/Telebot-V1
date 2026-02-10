@@ -22,7 +22,7 @@ from bot.callbacks import (
 
 from bot.cet import cet_handler
 from bot.daily_msg import send_daily_msg
-from core.pt_sft_admin import start_pt_admin
+from core.pt_sft_admin import start_pt_admin, handle_pt_admin_callbacks
 
 from utils.time_utils import SG_TZ, DAILY_MSG_TIME
 
@@ -67,6 +67,7 @@ def main():
     application.add_handler(CommandHandler("start_sft", start_sft))
     application.add_handler(CommandHandler("start_status", start_status))
     application.add_handler(CommandHandler("start_movement", start_movement))
+    application.add_handler(CommandHandler("pt_admin", start_pt_admin))
     application.add_handler(CommandHandler("pt_sft_admin", start_pt_admin))
     application.add_handler(CommandHandler("start_parade_state", start_parade_state))
     application.add_handler(CommandHandler("import_user", import_user))
@@ -76,6 +77,9 @@ def main():
     # -----------------------------
     # Callback Handlers (Buttons)
     # -----------------------------
+    application.add_handler(
+        CallbackQueryHandler(handle_pt_admin_callbacks, pattern=r"^ptadmin:")
+    )
     application.add_handler(
         CallbackQueryHandler(callback_router, pattern=r"^(mov|sft|parade)")
     )

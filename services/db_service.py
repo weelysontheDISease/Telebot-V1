@@ -86,10 +86,20 @@ class SFTService:
         )
 
     @classmethod
-    def remove_submission(cls, user_id: int):
+    def remove_submission(cls, user_id: int) -> bool:
+        before = len(cls._submissions)
         cls._submissions = [
             s for s in cls._submissions if s.user_id != user_id
         ]
+        return len(cls._submissions) < before
+
+    @classmethod
+    def clear_submissions(cls):
+        cls._submissions = []
+
+    @classmethod
+    def get_submissions_for_date(cls, date: str) -> List[SFTSubmission]:
+        return [s for s in cls._submissions if s.date == date]
 
     # ---------- SUMMARY GENERATION ----------
 
@@ -101,6 +111,7 @@ class SFTService:
             if s.date != date:
                 continue
             key = f"{s.activity} @ {s.location}"
+            key = f"{s.activity} @ {s.location}" if s.location else s.activity
             grouped[key].append(s)
 
         if not grouped:
