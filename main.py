@@ -59,7 +59,9 @@ def main():
 
     application.add_handler(
         MessageHandler(
-            filters.Chat(chat_id=IC_GROUP_CHAT_ID) & filters.TEXT & ~filters.COMMAND,
+            filters.Chat(chat_id=IC_GROUP_CHAT_ID)
+            & (filters.TEXT | filters.CAPTION)
+            & ~filters.COMMAND,
             cet_handler,
             block=False,
         )
