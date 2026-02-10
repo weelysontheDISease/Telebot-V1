@@ -2,9 +2,15 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional
 
+def _display_instructor_name(instructor_name: str) -> str:
+    parts = instructor_name.split(maxsplit=1)
+    if len(parts) == 2:
+        return parts[1]
+    return instructor_name
+
 
 # =========================
-# DATA MODELS
+# DATA MODELS   
 # =========================
 
 @dataclass
@@ -86,21 +92,31 @@ class SFTService:
         )
 
     @classmethod
-    def remove_submission(cls, user_id: int):
+    def remove_submission(cls, user_id: int) -> bool:
+        before = len(cls._submissions)
         cls._submissions = [
             s for s in cls._submissions if s.user_id != user_id
         ]
+        return len(cls._submissions) < before
+
+    @classmethod
+    def clear_submissions(cls):
+        cls._submissions = []
+
+    @classmethod
+    def get_submissions_for_date(cls, date: str) -> List[SFTSubmission]:
+        return [s for s in cls._submissions if s.date == date]
 
     # ---------- SUMMARY GENERATION ----------
 
     @classmethod
-    def generate_summary(cls, date: str) -> str:
+    def generate_summary(cls, date: str, instructor_name: str, salutation: str) -> str:
         grouped = defaultdict(list)
 
         for s in cls._submissions:
             if s.date != date:
                 continue
-            key = f"{s.activity} @ {s.location}"
+            key = f"{s.activity} @ {s.location}" if s.location else s.activity
             grouped[key].append(s)
 
         if not grouped:
@@ -125,17 +141,32 @@ class SFTService:
             lines.append("Please resolve before generating summary.")
             return "\n".join(lines)
 
-        # ✅ VALID → build summary
-        lines = [f"SFT Summary ({date})"]
+        all_entries = [entry for entries in grouped.values() for entry in entries]
+        earliest = min(entry.start for entry in all_entries)
+        latest = max(entry.end for entry in all_entries)
+        
+        display_name = _display_instructor_name(instructor_name)
+
+        lines = [
+            (
+                f"Good Afternoon {salutation} {display_name}, below are the cadets "
+                f"participating in SFT for {date} from {earliest}H to {latest}H."
+            ),
+            "",
+            "Submission of names",
+        ]
+
+        counter = 1
 
         for activity, entries in grouped.items():
-            lines.append(f"\n{activity}:")
-            for idx, e in enumerate(entries, 1):
-                lines.append(
-                    f"{idx}. {e.user_name} {e.start}-{e.end}"
-                )
+            for entry in entries:
+                lines.append(f"{counter}. {entry.user_name} {entry.start}-{entry.end}")
+                counter += 1
 
-        return "\n".join(lines)
+            lines.append(activity)
+            lines.append("")
+
+        return "\n".join(lines).rstrip()
 
 
 # =========================

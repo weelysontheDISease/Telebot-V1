@@ -3,12 +3,13 @@ from telegram.ext import CallbackQueryHandler
 
 from bot.helpers import reply
 from core.report_manager import ReportManager
-from utils.time_utils import is_valid_24h_time
+from utils.time_utils import is_valid_24h_time, now_hhmm
 from config.constants import (
     IC_GROUP_CHAT_ID,
     MOVEMENT_TOPIC_ID,
     ADMIN_IDS,
-    PARADE_STATE_TOPIC_ID,
+    LOCATIONS,
+    PARADE_STATE_TOPIC_ID
 )
 
 # IMPORTANT: import ONLY the real SFT handler
@@ -43,6 +44,15 @@ async def callback_router(update, context):
         return
     
     # ------------------------------
+    # PT ADMIN
+    # ------------------------------
+    if data.startswith("ptadmin"):
+        context.user_data["mode"] = "PT_ADMIN"
+        from core.pt_sft_admin import handle_pt_admin_callbacks
+        await handle_pt_admin_callbacks(update, context)
+        return
+    
+    # ------------------------------
     # PARADE STATE (always starts with "parade")
     # ------------------------------
     
@@ -71,10 +81,9 @@ async def text_input_router(update, context):
         await movement_text_input(update, context)
         return
 
-    if mode == "PT_SFT_ADMIN":
-        from core.pt_sft_admin import handle_pt_sft_admin_text
-        await handle_pt_sft_admin_text(update, context)
-        return
+    if mode == "PT_ADMIN":
+        from core.pt_sft_admin import handle_pt_admin_text
+        await handle_pt_admin_text(update, context)
     
     if mode in {
         "report",
@@ -275,6 +284,9 @@ async def handle_movement_callbacks(update, context):
 
     if data.startswith("mov:to|"):
         _, to_loc = data.split("|", 1)
+        if to_loc == context.user_data.get("from"):
+            await reply(update, "❌ 'From' and 'To' locations cannot be the same.")
+            return
         context.user_data["to"] = to_loc
         context.user_data["awaiting_to"] = False
         context.user_data["awaiting_time"] = False
@@ -295,7 +307,8 @@ async def handle_movement_callbacks(update, context):
         )
         context.user_data["final_message"] = msg
         keyboard = [[
-            InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm")
+            InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm"),
+            InlineKeyboardButton("❌ Cancel", callback_data="mov:cancel"),
         ]]
         await reply(
             update,
@@ -311,9 +324,13 @@ async def handle_movement_callbacks(update, context):
 
     if data == "mov:confirm":
         msg = context.user_data.get("final_message")
+        if not msg:
+            await reply(update, "❌ No movement data found.")
+            return
 
-    if not msg:
-        await reply(update, "❌ No movement data found.")
+    if data == "mov:cancel":
+        context.user_data.clear()
+        await reply(update, "❌ Movement reporting cancelled.")
         return
 
     # Send to IC group
@@ -384,7 +401,8 @@ async def movement_text_input(update, context):
     context.user_data["final_message"] = msg
 
     keyboard = [[
-        InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm")
+        InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm"),
+        InlineKeyboardButton("❌ Cancel", callback_data="mov:cancel"),
     ]]
 
     await reply(

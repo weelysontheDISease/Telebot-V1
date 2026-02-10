@@ -77,7 +77,17 @@ async def handle_sft_callbacks(update, context):
     # ACTIVITY SELECTED
     # ------------------------------
     if data.startswith("sft_activity|"):
-        activity, location = data.split("|")[1:]
+        payload = data.split("|", 1)[1]
+
+        if "|" in payload:
+            activity, location = payload.split("|", 1)
+        elif " @ " in payload:
+            activity, location = payload.split(" @ ", 1)
+            activity = activity.strip()
+            location = location.strip()
+        else:
+            activity = payload.strip()
+            location = ""
 
         context.user_data["activity"] = activity
         context.user_data["location"] = location
@@ -130,7 +140,7 @@ async def handle_sft_callbacks(update, context):
         preview = (
             f"📋 *SFT Submission Preview*\n\n"
             f"{context.user_data['user_name']}\n"
-            f"{context.user_data['activity']} @ {context.user_data['location']}\n"
+            f"{context.user_data['activity']}{(' @ ' + context.user_data['location']) if context.user_data['location'] else ''}\n"
             f"{start}-{end}\n\n"
             f"Confirm submission?"
         )
@@ -169,7 +179,7 @@ async def handle_sft_callbacks(update, context):
         await reply(
             update,
             "✅ *SFT successfully submitted.*\n\n"
-            f"{context.user_data['activity']} @ {context.user_data['location']}\n"
+            f"{context.user_data['activity']}{(' @ ' + context.user_data['location']) if context.user_data['location'] else ''}\n"
             f"Time: {context.user_data['start']}-{context.user_data['end']}",
             parse_mode="Markdown",
         )
