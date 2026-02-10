@@ -3,7 +3,7 @@ import os
 import tempfile
 
 from bot.helpers import reply
-from config.constants import ACTIVITIES, ADMIN_IDS
+from config.constants import ACTIVITIES
 from services.db_service import get_sft_window
 from db.crud import (
     clear_user_data,
@@ -14,6 +14,7 @@ from db.crud import (
 )
 from services.db_service import SFTService
 from db.import_users_csv import import_users
+from services.auth_service import is_admin_user
 
 # =========================
 # START ENTRY POINT
@@ -198,7 +199,7 @@ async def start_parade_state(update, context):
 # USER IMPORT (CSV)
 # =========================
 def _is_admin(user_id: int | None) -> bool:
-    return user_id is not None and user_id in ADMIN_IDS
+    return is_admin_user(user_id)
 
 
 async def _handle_import_csv(update, context, clear_first: bool):

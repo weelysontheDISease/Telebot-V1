@@ -7,14 +7,13 @@ from utils.time_utils import is_valid_24h_time, now_hhmm
 from config.constants import (
     IC_GROUP_CHAT_ID,
     MOVEMENT_TOPIC_ID,
-    ADMIN_IDS,
     LOCATIONS,
     PARADE_STATE_TOPIC_ID
 )
 
 # IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
-
+from services.auth_service import get_all_admin_user_ids
 
 # ==================================================
 # CALLBACK ROUTER
@@ -341,7 +340,7 @@ async def handle_movement_callbacks(update, context):
     )
 
     # Notify admins
-    for admin in ADMIN_IDS:
+    for admin in get_all_admin_user_ids():
         await context.bot.send_message(
             chat_id=admin,
             text="Movement report sent:\n\n" + msg,

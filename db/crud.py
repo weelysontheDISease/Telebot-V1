@@ -14,6 +14,18 @@ db = SessionLocal()
 def get_user_by_telegram_id(telegram_id: int):
     return db.query(User).filter(User.telegram_id == telegram_id).first()
 
+def get_admin_telegram_ids() -> list[int]:
+    session = SessionLocal()
+    try:
+        rows = session.query(User.telegram_id).filter(
+            User.is_admin.is_(True),
+            User.is_active.is_(True),
+            User.telegram_id.isnot(None),
+        ).all()
+        return [row[0] for row in rows]
+    finally:
+        session.close()
+        
 def _normalize_username(value: str | None):
     if value is None:
         return None
