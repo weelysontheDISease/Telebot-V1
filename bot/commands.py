@@ -5,7 +5,7 @@ import tempfile
 from bot.helpers import reply
 from config.constants import ACTIVITIES, ADMIN_IDS
 from services.db_service import get_sft_window
-from db.crud import clear_user_data, get_all_cadet_names, list_users
+from db.crud import clear_user_data, get_all_cadet_names, list_users, get_all_instructor_names
 from db.import_users_csv import import_users
 
 # =========================
@@ -98,6 +98,8 @@ async def start_movement(update, context):
 async def start_status(update, context):
     """Main menu for RSO/MA/RSI reporting"""
     context.user_data.clear()
+    context.user_data['all_names'] = get_all_cadet_names()
+    context.user_data['all_instructors'] = get_all_instructor_names()
 
     keyboard = [
         [InlineKeyboardButton("📋 Report RSO", callback_data="status_menu|report_rso")],
