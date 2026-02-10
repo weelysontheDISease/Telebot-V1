@@ -10,7 +10,7 @@ def _display_instructor_name(instructor_name: str) -> str:
 
 
 # =========================
-# DATA MODELS
+# DATA MODELS   
 # =========================
 
 @dataclass
@@ -144,10 +144,12 @@ class SFTService:
         all_entries = [entry for entries in grouped.values() for entry in entries]
         earliest = min(entry.start for entry in all_entries)
         latest = max(entry.end for entry in all_entries)
+        
+        display_name = _display_instructor_name(instructor_name)
 
         lines = [
             (
-                f"Good Afternoon {salutation} {instructor_name}, below are the cadets "
+                f"Good Afternoon {salutation} {display_name}, below are the cadets "
                 f"participating in SFT for {date} from {earliest}H to {latest}H."
             ),
             "",
