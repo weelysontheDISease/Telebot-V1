@@ -14,6 +14,7 @@ from config.constants import (
 # IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
 from services.auth_service import get_all_admin_user_ids
+from utils.rate_limiter import user_rate_limiter
 
 # ==================================================
 # CALLBACK ROUTER
@@ -26,6 +27,11 @@ async def callback_router(update, context):
     query = update.callback_query
     data = query.data
 
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_rate_limiter.allow(user_id, "callback_router", max_requests=25, window_seconds=10):
+        await query.answer("Too many requests. Please slow down.", show_alert=False)
+        return
+    
     # ------------------------------
     # MOVEMENT (always starts with "mov")
     # ------------------------------
@@ -74,6 +80,11 @@ async def text_input_router(update, context):
     """
     Routes free-text input based on mode.
     """
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_rate_limiter.allow(user_id, "text_input_router", max_requests=12, window_seconds=15):
+        await reply(update, "⏳ Too many messages in a short time. Please slow down.")
+        return
+    
     mode = context.user_data.get("mode")
 
     if mode == "MOVEMENT":

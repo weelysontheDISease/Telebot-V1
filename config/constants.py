@@ -148,6 +148,14 @@ CET_KEYWORDS = [
 ]
 
 # =========================
+# SECURITY LIMITS
+# =========================
+
+# Maximum upload size for /import_user CSV uploads (2 MB)
+MAX_IMPORT_CSV_SIZE_BYTES = 2 * 1024 * 1024
+
+
+# =========================
 # DAILY MESSAG CONFIG
 # =========================
 
