@@ -322,5 +322,5 @@ def get_medical_events():
 
 def get_all_cadets():
     return db.query(User).filter(
-        User.role == "cadet"
+        User.role == "Cadet"
 	).all()
