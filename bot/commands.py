@@ -5,7 +5,14 @@ import tempfile
 from bot.helpers import reply
 from config.constants import ACTIVITIES, ADMIN_IDS
 from services.db_service import get_sft_window
-from db.crud import clear_user_data, get_all_cadet_names, list_users, get_all_instructor_names
+from db.crud import (
+    clear_user_data,
+    get_all_cadet_names,
+    list_users,
+    get_all_instructor_names,
+    get_user_by_telegram_id,
+)
+from services.db_service import SFTService
 from db.import_users_csv import import_users
 
 # =========================
@@ -58,6 +65,53 @@ async def start_sft(update, context):
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown",
     )
+
+async def quit_sft(update, context):
+    telegram_id = update.effective_user.id if update.effective_user else None
+
+    if telegram_id is None:
+        await reply(update, "❌ Unable to identify your account.")
+        return
+
+    user = get_user_by_telegram_id(telegram_id)
+    if not user:
+        await reply(update, "❌ You are not registered in the system.")
+        return
+
+    removed = SFTService.remove_submission(user.id)
+
+    if removed:
+        await reply(
+            update,
+            "✅ You have quit SFT. All your submitted SFT entries were removed.",
+        )
+        return
+
+    await reply(update, "ℹ️ You currently have no SFT submissions to remove.")
+
+async def quit_sft(update, context):
+    telegram_id = update.effective_user.id if update.effective_user else None
+
+    if telegram_id is None:
+        await reply(update, "❌ Unable to identify your account.")
+        return
+
+    user = get_user_by_telegram_id(telegram_id)
+    if not user:
+        await reply(update, "❌ You are not registered in the system.")
+        return
+
+    removed = SFTService.remove_submission(user.id)
+
+    if removed:
+        await reply(
+            update,
+            "✅ You have quit SFT. All your submitted SFT entries were removed.",
+        )
+        return
+
+    await reply(update, "ℹ️ You currently have no SFT submissions to remove.")
+
 
 
 # =========================

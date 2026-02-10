@@ -6,6 +6,7 @@ from services.db_service import DatabaseService
 from bot.commands import (
     start,
     start_sft,
+    quit_sft,
     start_movement,
     start_status,
     start_parade_state,
@@ -65,6 +66,7 @@ def main():
     )
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("start_sft", start_sft))
+    application.add_handler(CommandHandler("quit_sft", quit_sft))
     application.add_handler(CommandHandler("start_status", start_status))
     application.add_handler(CommandHandler("start_movement", start_movement))
     application.add_handler(CommandHandler("pt_admin", start_pt_admin))
