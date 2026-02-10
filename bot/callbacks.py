@@ -3,11 +3,12 @@ from telegram.ext import CallbackQueryHandler
 
 from bot.helpers import reply
 from core.report_manager import ReportManager
-from utils.time_utils import is_valid_24h_time
+from utils.time_utils import is_valid_24h_time, now_hhmm
 from config.constants import (
     IC_GROUP_CHAT_ID,
     MOVEMENT_TOPIC_ID,
     ADMIN_IDS,
+    LOCATIONS
 )
 
 # IMPORTANT: import ONLY the real SFT handler
@@ -263,6 +264,9 @@ async def handle_movement_callbacks(update, context):
 
     if data.startswith("mov:to|"):
         _, to_loc = data.split("|", 1)
+        if to_loc == context.user_data.get("from"):
+            await reply(update, "❌ 'From' and 'To' locations cannot be the same.")
+            return
         context.user_data["to"] = to_loc
         context.user_data["awaiting_to"] = False
         context.user_data["awaiting_time"] = False
@@ -299,10 +303,9 @@ async def handle_movement_callbacks(update, context):
 
     if data == "mov:confirm":
         msg = context.user_data.get("final_message")
-
-    if not msg:
-        await reply(update, "❌ No movement data found.")
-        return
+        if not msg:
+            await reply(update, "❌ No movement data found.")
+            return
 
     # Send to IC group
     await context.bot.send_message(
