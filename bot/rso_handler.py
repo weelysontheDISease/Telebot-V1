@@ -4,28 +4,125 @@ from telegram.ext import CallbackContext
 
 
 
-from db.crud import (get_user_records, update_user_record, create_user_record, get_ma_records, create_ma_record, update_ma_record, get_user_rsi_records, create_rsi_record, update_rsi_record,get_all_cadet_names,get_all_instructor_names)
+from db.crud import (
+    get_user_records,
+    update_user_record,
+    create_user_record,
+    get_ma_records,
+    create_ma_record,
+    update_ma_record,
+    get_user_rsi_records,
+    create_rsi_record,
+    update_rsi_record,
+    get_all_cadet_names,
+    get_all_instructor_names,
+)
 
 from bot.helpers import reply
 
 # ------------ Common Utility Functions ------------ #
 
-NAMES = get_all_cadet_names()
-instructor_list = get_all_instructor_names()
-
 def set_mode(context: CallbackContext, mode: str):
-    context.user_data.clear()
     context.user_data["mode"] = mode
 
 
-def make_name_keyboard(prefix: str) -> InlineKeyboardMarkup:
-    keyboard = [[InlineKeyboardButton(name, callback_data=f"{prefix}|{name}")] for name in NAMES]
+def reset_entry_state(context: CallbackContext):
+    keep_keys = {"all_names", "all_instructors", "pending_reports", "mode"}
+    preserved = {
+        key: value
+        for key, value in context.user_data.items()
+        if key in keep_keys
+    }
+    context.user_data.clear()
+    context.user_data.update(preserved)
+
+
+def add_pending_report(context: CallbackContext, report: dict):
+    pending = context.user_data.setdefault("pending_reports", [])
+    pending.append(report)
+
+
+def has_nonempty_value(value: str | None) -> bool:
+    return bool(value and value.strip())
+
+
+def pending_update_exists(context: CallbackContext, record_id: int | None, modes: set[str]) -> bool:
+    if record_id is None:
+        return False
+    pending = context.user_data.get("pending_reports", [])
+    for report in pending:
+        if report.get("record_id") == record_id and report.get("mode") in modes:
+            return True
+    return False
+
+
+def format_pending_reports(reports: list[dict], mode: str) -> str:
+    lines = []
+    if mode =='rsi_report' or mode == 'rsi_update':
+        lines.append("RSI")
+    elif mode == 'report' or mode == 'update':
+        lines.append("RSO")
+    for idx, report in enumerate(reports, 1):
+        name = report.get("name", "N/A")
+        symptoms = report.get("symptoms", "")
+        diagnosis = report.get("diagnosis", "")
+        status = report.get("status", "")
+
+        lines.append(f"{idx}. {name}")
+        lines.append(f"SYMPTOMS: {symptoms}")
+        lines.append(f"DIAGNOSIS: {diagnosis}")
+        lines.append(f"STATUS: {status}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def persist_pending_reports(reports: list[dict]):
+    for report in reports:
+        mode = report.get("mode")
+        if mode == "report":
+            create_user_record(
+                name=report.get("name", ""),
+                symptoms=report.get("symptoms", ""),
+                diagnosis=report.get("diagnosis", ""),
+            )
+        elif mode == "update":
+            update_user_record(
+                record_id=report.get("record_id"),
+                symptoms=report.get("symptoms", ""),
+                diagnosis=report.get("diagnosis", ""),
+                status=report.get("status", ""),
+                start_date=report.get("start_date", ""),
+                end_date=report.get("end_date", ""),
+            )
+        elif mode == "rsi_report":
+            create_rsi_record(
+                name=report.get("name", ""),
+                symptoms=report.get("symptoms", ""),
+                diagnosis=report.get("diagnosis", ""),
+            )
+        elif mode == "rsi_update":
+            update_rsi_record(
+                record_id=report.get("record_id"),
+                diagnosis=report.get("diagnosis", ""),
+                status_type=report.get("status_type", "MC"),
+                status=report.get("status", ""),
+                start_date=report.get("start_date", ""),
+                end_date=report.get("end_date", ""),
+            )
+
+
+def make_name_keyboard(context, prefix: str) -> InlineKeyboardMarkup:
+    names = context.user_data.get('all_names', [])
+    keyboard = [
+        [InlineKeyboardButton(name, callback_data=f"{prefix}|{name}")]
+        for name in names
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 
 async def prompt_name_selection(update: Update, context: CallbackContext, mode: str, prompt: str, prefix: str):
     set_mode(context, mode)
-    await reply(update, prompt, reply_markup=make_name_keyboard(prefix))
+    await reply(update, prompt, reply_markup=make_name_keyboard(context, prefix))
 
 # ------------ Common Handlers for RSO, RSI and MA ------------ #
 
@@ -72,6 +169,20 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
             return
 
         latest_record = records[-1]
+        if has_nonempty_value(getattr(latest_record, "diagnosis", "")):
+            await reply(
+                update,
+                f"{name} already has a diagnosis on record. Further updates are not allowed."
+            )
+            context.user_data.clear()
+            return
+        if pending_update_exists(context, getattr(latest_record, "id", None), {"update"}):
+            await reply(
+                update,
+                f"{name} already has an update queued in this batch."
+            )
+            context.user_data.clear()
+            return
         context.user_data["symptoms"] = getattr(latest_record, "symptoms", "")
         context.user_data["diagnosis"] = getattr(latest_record, "diagnosis", "")
         context.user_data["status"] = getattr(latest_record, "status", "")
@@ -88,14 +199,26 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
             return
 
         latest_record = user_records[-1]
-        context.user_data["appointment"] = getattr(latest_record, "appointment", "")
-        context.user_data["appointment_location"] = getattr(latest_record, "appointment_location", "")
-        context.user_data["appointment_date"] = getattr(latest_record, "appointment_date", "")
-        context.user_data["appointment_time"] = getattr(latest_record, "appointment_time", "")
+        # Extract from correct MedicalEvent fields
+        context.user_data["appointment"] = getattr(latest_record, "appointment_type", "") or ""
+        context.user_data["appointment_location"] = getattr(latest_record, "location", "") or ""
+
+        # Parse event_datetime to get date and time
+        event_dt = getattr(latest_record, "event_datetime", None)
+        if event_dt:
+            context.user_data["appointment_date"] = event_dt.strftime("%d%m%y")
+            context.user_data["appointment_time"] = event_dt.strftime("%H%M")
+        else:
+            context.user_data["appointment_date"] = ""
+            context.user_data["appointment_time"] = ""
+
         context.user_data["record_id"] = getattr(latest_record, "id", None)
 
-        keyboard = [[InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
-                    for instructor in instructor_list]
+        instructors = get_all_instructor_names()
+        keyboard = [
+            [InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
+            for instructor in instructors
+        ]
         await reply(update, "Select who endorsed:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
@@ -108,6 +231,20 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
             return
 
         latest_record = records[-1]
+        if has_nonempty_value(getattr(latest_record, "diagnosis", "")):
+            await reply(
+                update,
+                f"{name} already has a diagnosis on record. Further updates are not allowed."
+            )
+            context.user_data.clear()
+            return
+        if pending_update_exists(context, getattr(latest_record, "id", None), {"rsi_update"}):
+            await reply(
+                update,
+                f"{name} already has an update queued in this batch."
+            )
+            context.user_data.clear()
+            return
         context.user_data["record_id"] = getattr(latest_record, "id", None)
         context.user_data["symptoms"] = getattr(latest_record, "symptoms", "")
         context.user_data["awaiting_rsi_diagnosis"] = True
@@ -324,7 +461,7 @@ async def manual_input_handler(update: Update, context: CallbackContext):
         if context.user_data.get("awaiting_rsi_custom_days"):
             try:
                 days = int(user_input)
-                if days <= 0:
+                if days < 0:
                     await reply(update, "Number of days must be a positive number. Please try again.")
                     return
                 if days > 365:
@@ -391,11 +528,7 @@ async def mc_days_button_handler(update: Update, context: CallbackContext):
             context.user_data['status'] = f"{days} DAYS MC"
         context.user_data['number_of_mc_days'] = int(days)
         context.user_data['awaiting_mc_days'] = False
-        await reply(
-            update,
-            f"Status updated to: '{context.user_data['status']}'"
-        )
-        await show_mc_days_buttons(update, context)
+        await show_preview_summary(update, context)
 
 
 async def show_preview_summary(update: Update, context: CallbackContext):
@@ -412,8 +545,6 @@ async def show_preview_summary(update: Update, context: CallbackContext):
         status += f" ({start_date}-{end_date})"
         context.user_data['start_date'] = start_date
         context.user_data['end_date'] = end_date
-
-
 
     summary = f"NAME: {name}\n"
     summary += f"SYMPTOMS: {symptoms}\n"
@@ -444,44 +575,88 @@ async def confirm_handler(update: Update, context: CallbackContext):
     symptoms = context.user_data.get('symptoms', '')
     diagnosis = context.user_data.get('diagnosis', '')
     status = context.user_data.get('status', '')
+    mode = context.user_data.get("mode")
+
     if status != '':
         start_date = context.user_data.get('start_date', '')
         end_date = context.user_data.get('end_date', '')
         status += f" ({start_date}-{end_date})"
 
+    else:
+        start_date = ''
+        end_date = ''
 
-    if context.user_data.get("mode") == "report":
-        # Save new report to database
-        create_user_record(
-            name=name,
-            symptoms=symptoms,
-            diagnosis=diagnosis
-        )
-        # Add logic to send to IC Chat
-    elif context.user_data.get("mode") == "update":
-        # Update existing report in database
-        record_id = context.user_data.get('record_id')
-        update_user_record(
-            record_id=record_id,
-            symptoms=symptoms,
-            diagnosis=diagnosis,
-            status=status,
-            start_date=start_date,
-            end_date=end_date
-        )
 
-        # Add logic to send update to IC Chat
+    if mode == "update" and pending_update_exists(context, context.user_data.get("record_id"), {"update"}):
+        await reply(update, "This update is already queued in the current batch.")
+        reset_entry_state(context)
+        return
 
+    add_pending_report(
+        context,
+        {
+            "mode": mode,
+            "name": name,
+            "symptoms": symptoms,
+            "diagnosis": diagnosis,
+            "status": status,
+            "start_date": start_date,
+            "end_date": end_date,
+            "record_id": context.user_data.get("record_id"),
+        },
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("➕ Report Another", callback_data=f"continue_reporting|{mode}")],
+        [InlineKeyboardButton("✅ Done", callback_data="done_reporting")]
+    ]
     await reply(
         update,
-        "Report saved. Thank you!"
+        "✅ Added to batch. Report another?",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
-    context.user_data.clear()
+    reset_entry_state(context)
 
 
 async def cancel(update: Update, context: CallbackContext):
     context.user_data.clear()
     await reply(update, "Cancelled.")
+
+async def continue_reporting_handler(update: Update, context: CallbackContext):
+    """Handle continuing to report another person"""
+    query = update.callback_query
+    await query.answer()
+
+    _, mode = query.data.split("|", 1)
+    reset_entry_state(context)
+
+    if mode == "report":
+        await start_status_report(update, context)
+    elif mode == "update":
+        await start_update_status(update, context)
+    elif mode == "rsi_report":
+        await start_rsi_report(update, context)
+    elif mode == "rsi_update":
+        await start_update_rsi(update, context)
+
+async def done_reporting_handler(update: Update, context: CallbackContext):
+    """Handle completion of all reporting"""
+    query = update.callback_query
+    await query.answer()
+    reports = context.user_data.get("pending_reports", [])
+    mode = context.user_data.get("mode")
+    if not reports:
+        context.user_data.clear()
+        await reply(update, "All done! Use /start_status to report again.")
+        return
+
+    summary = format_pending_reports(reports,mode)
+    persist_pending_reports(reports)
+    context.user_data.clear()
+    await reply(
+        update,
+        summary
+    )
 
 
 # def report_rso_command(update: Update, context: CallbackContext):
@@ -510,7 +685,7 @@ async def show_ma_preview_summary(update: Update, context: CallbackContext):
     appointment_date = context.user_data.get('appointment_date', 'N/A')
     appointment_time = context.user_data.get('appointment_time', 'N/A')
 
-    summary = f"NAME: {name}\n"
+    summary = f"{name}\n"
     summary += f"NAME: {appointment}\n"
     summary += f"LOCATION: {appointment_location}\n"
     summary += f"DATE: {appointment_date}\n"
@@ -619,6 +794,7 @@ async def start_update_rsi(update: Update, context: CallbackContext):
 
 async def show_rsi_days_buttons(update: Update, context: CallbackContext):
     keyboard = [
+        [InlineKeyboardButton("No Status Given", callback_data="rsi_days|0")],
         [InlineKeyboardButton("1 day", callback_data="rsi_days|1")],
         [InlineKeyboardButton("2 days", callback_data="rsi_days|2")],
         [InlineKeyboardButton("3 days", callback_data="rsi_days|3")],
@@ -628,7 +804,7 @@ async def show_rsi_days_buttons(update: Update, context: CallbackContext):
     ]
     await reply(
         update,
-        "How many days?",
+        "How many days of status?",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -642,8 +818,18 @@ async def rsi_days_button_handler(update: Update, context: CallbackContext):
         await reply(update, "Enter the number of days:")
         return
 
-    context.user_data["number_of_days"] = int(days)
-    await show_rsi_status_type_buttons(update, context)
+    days_int = int(days)
+    context.user_data["number_of_days"] = days_int
+    
+    # If no status given, skip status type selection
+    if days_int == 0:
+        context.user_data["status_type"] = "N/A"
+        context.user_data["status"] = "N/A"
+        context.user_data["start_date"] = ""
+        context.user_data["end_date"] = ""
+        await show_rsi_preview_summary(update, context, include_status=True)
+    else:
+        await show_rsi_status_type_buttons(update, context)
 
 async def show_rsi_status_type_buttons(update: Update, context: CallbackContext):
     keyboard = [
@@ -665,11 +851,17 @@ async def rsi_status_type_handler(update: Update, context: CallbackContext):
 
     if days == 1:
         status = f"1 DAY {status_type}"
+    elif days == 0:
+        status = "N/A"
     else:
         status = f"{days} DAYS {status_type}"
 
-    start_date = datetime.now().date().strftime("%d%m%y")
-    end_date = (datetime.now().date() + timedelta(days=days - 1)).strftime("%d%m%y")
+    if status == "N/A":
+        start_date = ""
+        end_date = ""
+    else:
+        start_date = datetime.now().date().strftime("%d%m%y")
+        end_date = (datetime.now().date() + timedelta(days=days - 1)).strftime("%d%m%y")
 
     context.user_data["status_type"] = status_type
     context.user_data["status"] = status
@@ -688,7 +880,10 @@ async def show_rsi_preview_summary(update: Update, context: CallbackContext, inc
         status = context.user_data.get("status", "")
         start_date = context.user_data.get("start_date", "")
         end_date = context.user_data.get("end_date", "")
-        status_line = f"{status} ({start_date}-{end_date})" if status else ""
+        if status == "N/A":
+            status_line = "N/A"
+        else:
+            status_line = f"{status} ({start_date}-{end_date})" if status else ""
 
     summary = f"NAME: {name}\n"
     summary += f"SYMPTOMS: {symptoms}\n"
@@ -713,13 +908,26 @@ async def confirm_rsi_report_handler(update: Update, context: CallbackContext):
     name = context.user_data.get("name", "N/A")
     symptoms = context.user_data.get("symptoms", "")
 
-    create_rsi_record(
-        name=name,
-        symptoms=symptoms
+    keyboard = [
+        [InlineKeyboardButton("➕ Report Another", callback_data="continue_reporting|rsi_report")],
+        [InlineKeyboardButton("✅ Done", callback_data="done_reporting")]
+    ]
+    add_pending_report(
+        context,
+        {
+            "mode": "rsi_report",
+            "name": name,
+            "symptoms": symptoms,
+            "diagnosis": context.user_data.get("diagnosis", ""),
+            "status": "",
+        },
     )
-
-    await reply(update, "RSI report saved. Thank you!")
-    context.user_data.clear()
+    await reply(
+        update,
+        "✅ Added to batch. Report another?",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    reset_entry_state(context)
 
 async def confirm_rsi_update_handler(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -734,17 +942,35 @@ async def confirm_rsi_update_handler(update: Update, context: CallbackContext):
     start_date = context.user_data.get("start_date", "")
     end_date = context.user_data.get("end_date", "")
 
-    update_rsi_record(
-        record_id=record_id,
-        diagnosis=diagnosis,
-        status_type=status_type,
-        status=status,
-        start_date=start_date,
-        end_date=end_date
-    )
+    if pending_update_exists(context, record_id, {"rsi_update"}):
+        await reply(update, "This update is already queued in the current batch.")
+        reset_entry_state(context)
+        return
 
-    await reply(update, "RSI update saved. Thank you!")
-    context.user_data.clear()
+    keyboard = [
+        [InlineKeyboardButton("➕ Update Another", callback_data="continue_reporting|rsi_update")],
+        [InlineKeyboardButton("✅ Done", callback_data="done_reporting")]
+    ]
+    add_pending_report(
+        context,
+        {
+            "mode": "rsi_update",
+            "record_id": record_id,
+            "name": context.user_data.get("name", "N/A"),
+            "symptoms": context.user_data.get("symptoms", ""),
+            "diagnosis": diagnosis,
+            "status_type": status_type,
+            "status": status,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+    )
+    await reply(
+        update,
+        "✅ Added to batch. Update another?",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    reset_entry_state(context)
 
 # def report_rsi_command(update: Update, context: CallbackContext):
 #     start_rsi_report(update, context)

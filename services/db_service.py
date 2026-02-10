@@ -32,7 +32,8 @@ class SFTWindow:
 class DatabaseService:
     @staticmethod
     def initialise():
-        return None
+        from db.init_db import init_db
+        init_db()
 
 
 # =========================

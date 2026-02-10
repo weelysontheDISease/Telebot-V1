@@ -8,7 +8,10 @@ from bot.commands import (
     start_sft,
     start_movement,
     start_status,
-    start_parade_state
+    start_parade_state,
+    import_user,
+    import_user_document,
+    import_user_callback,
 )
 
 from bot.callbacks import (
@@ -66,15 +69,24 @@ def main():
     application.add_handler(CommandHandler("start_movement", start_movement))
     application.add_handler(CommandHandler("pt_sft_admin", start_pt_sft_admin))
     application.add_handler(CommandHandler("start_parade_state", start_parade_state))
+    application.add_handler(CommandHandler("import_user", import_user))
     register_status_handlers(application)
 
 
     # -----------------------------
     # Callback Handlers (Buttons)
     # -----------------------------
-    application.add_handler(CallbackQueryHandler(callback_router))
+    application.add_handler(
+        CallbackQueryHandler(callback_router, pattern=r"^(mov|sft)")
+    )
     application.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, text_input_router)
+    )
+    application.add_handler(
+        CallbackQueryHandler(import_user_callback, pattern=r"^import_user\|")
+    )
+    application.add_handler(
+        MessageHandler(filters.Document.ALL, import_user_document)
     )
 
 

@@ -42,12 +42,9 @@ async def callback_router(update, context):
         return
 
     # ------------------------------
-    # STATUS callbacks are handled by pattern handlers
+    # STATUS/import-user callbacks are handled by pattern handlers
     # ------------------------------
-    await query.answer(
-        "Invalid or expired action. Please restart.",
-        show_alert=True,
-    )
+    return
 
 
 # ==================================================
@@ -136,6 +133,8 @@ def register_status_handlers(dispatcher):
         rsi_status_type_handler,
         confirm_rsi_report_handler,
         confirm_rsi_update_handler,
+        continue_reporting_handler,
+        done_reporting_handler,
     )
 
     dispatcher.add_handler(
@@ -178,6 +177,12 @@ def register_status_handlers(dispatcher):
             confirm_rsi_update_handler, pattern=r"^confirm_rsi_update$"
         )
     )
+    dispatcher.add_handler(
+        CallbackQueryHandler(continue_reporting_handler, pattern=r"^continue_reporting\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(done_reporting_handler, pattern=r"^done_reporting$")
+    )
 
 
 # ==================================================
@@ -187,6 +192,44 @@ async def handle_movement_callbacks(update, context):
     query = update.callback_query
     await query.answer()
     data = query.data
+
+    def build_movement_keyboard():
+        names = context.user_data.get("all_names", [])
+        selected = context.user_data.get("selected", set())
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    f"{'✅' if name in selected else '⬜'} {name}",
+                    callback_data=f"mov:name|{name}",
+                )
+            ]
+            for name in names
+        ]
+        keyboard.append(
+            [InlineKeyboardButton("✅ Done Selecting", callback_data="mov:done")]
+        )
+        return InlineKeyboardMarkup(keyboard)
+
+    if data.startswith("mov:name|"):
+        _, name = data.split("|", 1)
+        selected = context.user_data.setdefault("selected", set())
+        if name in selected:
+            selected.remove(name)
+        else:
+            selected.add(name)
+        await query.edit_message_reply_markup(
+            reply_markup=build_movement_keyboard()
+        )
+        return
+
+    if data == "mov:done":
+        selected = context.user_data.get("selected", set())
+        if not selected:
+            await reply(update, "❌ Please select at least one cadet.")
+            return
+        context.user_data["awaiting_from"] = True
+        await reply(update, "📍 Where are they moving from?")
+        return
 
     if data == "mov:confirm":
         msg = context.user_data.get("final_message")
@@ -217,6 +260,28 @@ async def handle_movement_callbacks(update, context):
 # ==================================================
 async def movement_text_input(update, context):
     if context.user_data.get("mode") != "MOVEMENT":
+        return
+
+    if context.user_data.get("awaiting_from"):
+        value = update.message.text.strip()
+        if not value:
+            await reply(update, "❌ Please enter a valid location.")
+            return
+        context.user_data["from"] = value
+        context.user_data["awaiting_from"] = False
+        context.user_data["awaiting_to"] = True
+        await reply(update, "📍 Where are they moving to?")
+        return
+
+    if context.user_data.get("awaiting_to"):
+        value = update.message.text.strip()
+        if not value:
+            await reply(update, "❌ Please enter a valid location.")
+            return
+        context.user_data["to"] = value
+        context.user_data["awaiting_to"] = False
+        context.user_data["awaiting_time"] = True
+        await reply(update, "⏰ What time? (HHMM)")
         return
 
     if not context.user_data.get("awaiting_time"):
