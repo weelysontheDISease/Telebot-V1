@@ -4,14 +4,23 @@ from telegram.ext import CallbackContext
 
 
 
-from db.crud import (get_user_records, update_user_record, create_user_record, get_ma_records, create_ma_record, update_ma_record, get_user_rsi_records, create_rsi_record, update_rsi_record,get_all_cadet_names,get_all_instructor_names)
+from db.crud import (
+    get_user_records,
+    update_user_record,
+    create_user_record,
+    get_ma_records,
+    create_ma_record,
+    update_ma_record,
+    get_user_rsi_records,
+    create_rsi_record,
+    update_rsi_record,
+    get_all_cadet_names,
+    get_all_instructor_names,
+)
 
 from bot.helpers import reply
 
 # ------------ Common Utility Functions ------------ #
-
-NAMES = get_all_cadet_names()
-instructor_list = get_all_instructor_names()
 
 def set_mode(context: CallbackContext, mode: str):
     context.user_data.clear()
@@ -19,7 +28,11 @@ def set_mode(context: CallbackContext, mode: str):
 
 
 def make_name_keyboard(prefix: str) -> InlineKeyboardMarkup:
-    keyboard = [[InlineKeyboardButton(name, callback_data=f"{prefix}|{name}")] for name in NAMES]
+    names = get_all_cadet_names()
+    keyboard = [
+        [InlineKeyboardButton(name, callback_data=f"{prefix}|{name}")]
+        for name in names
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -94,8 +107,11 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
         context.user_data["appointment_time"] = getattr(latest_record, "appointment_time", "")
         context.user_data["record_id"] = getattr(latest_record, "id", None)
 
-        keyboard = [[InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
-                    for instructor in instructor_list]
+        instructors = get_all_instructor_names()
+        keyboard = [
+            [InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
+            for instructor in instructors
+        ]
         await reply(update, "Select who endorsed:", reply_markup=InlineKeyboardMarkup(keyboard))
         return
 
