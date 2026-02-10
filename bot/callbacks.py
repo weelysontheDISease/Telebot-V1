@@ -14,6 +14,7 @@ from config.constants import (
 # IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
 from services.auth_service import get_all_admin_user_ids
+from db.crud import get_big3_userids
 from utils.rate_limiter import user_rate_limiter
 
 # ==================================================
@@ -421,6 +422,14 @@ async def movement_text_input(update, context):
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
+
+def _can_send_parade_state(user_id: int | None) -> bool:
+    if is_admin_user(user_id):
+        return True
+
+    big3_userids = get_big3_userids()
+    return user_id is not None and user_id in big3_userids
+
 # ==================================================
 # PARADE STATE CALLBACKS
 # ==================================================
@@ -428,6 +437,12 @@ async def handle_parade_callbacks(update, context):
     query = update.callback_query
     await query.answer()
 
+    user_id = update.effective_user.id if update.effective_user else None
+    if not _can_send_parade_state(user_id):
+        await query.edit_message_text("❌ You are not authorized to send parade state.")
+        context.user_data.clear()
+        return
+    
     data = query.data
     text = context.user_data.get("generated_text")
 
