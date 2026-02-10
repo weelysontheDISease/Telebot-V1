@@ -407,3 +407,9 @@ def get_all_instructors():
     return db.query(User).filter(
         User.role == "instructor"
     ).all()
+
+def get_big3_userids():
+    results = db.query(User.telegram_id).filter(
+        User.role == "Big3"
+    ).all()
+    return [r[0] for r in results] # Flattens the tuples into a simple list
