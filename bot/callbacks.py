@@ -44,6 +44,15 @@ async def callback_router(update, context):
         return
     
     # ------------------------------
+    # PT ADMIN
+    # ------------------------------
+    if data.startswith("ptadmin"):
+        context.user_data["mode"] = "PT_ADMIN"
+        from core.pt_sft_admin import handle_pt_admin_callbacks
+        await handle_pt_admin_callbacks(update, context)
+        return
+    
+    # ------------------------------
     # PARADE STATE (always starts with "parade")
     # ------------------------------
     
@@ -72,10 +81,9 @@ async def text_input_router(update, context):
         await movement_text_input(update, context)
         return
 
-    if mode == "PT_SFT_ADMIN":
-        from core.pt_sft_admin import handle_pt_sft_admin_text
-        await handle_pt_sft_admin_text(update, context)
-        return
+    if mode == "PT_ADMIN":
+        from core.pt_sft_admin import handle_pt_admin_text
+        await handle_pt_admin_text(update, context)
     
     if mode in {
         "report",
