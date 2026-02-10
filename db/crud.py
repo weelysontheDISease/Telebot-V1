@@ -187,17 +187,31 @@ def delete_expired_statuses_and_events(target_date: date) -> tuple[int, int]:
         raise
     finally:
         session.close()
-        
+
 # ---------- Medical Events ----------
 
 # RSO Records
 
 def get_user_records(name: str):
-    return db.query(MedicalEvent).join(User).filter(User.full_name == name, MedicalEvent.event_type == "RSO").all()
+    parts = name.split(maxsplit=1)
+    if len(parts) != 2:
+        return []
+    rank, full_name = parts
+    return db.query(MedicalEvent).join(User).filter(
+        User.rank == rank,
+        User.full_name == full_name,
+        MedicalEvent.event_type == "RSO"
+    ).all()
+
+
+def _has_diagnosis(value: str | None) -> bool:
+    return bool(value and value.strip())
 
 def update_user_record(record_id: int, symptoms: str, diagnosis: str,status: str, start_date: str, end_date: str):
     record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
     if record:
+        if _has_diagnosis(record.diagnosis):
+            return record
         record.symptoms = symptoms
         record.diagnosis = diagnosis
         #Add Status start_date and end_date to MedicalStatus Table, with reference to MedicalEvent ID
@@ -219,7 +233,11 @@ def create_user_record(
     symptoms: str,
     diagnosis: str | None = None
 ):
-    user = db.query(User).filter(User.full_name == name).first()
+    parts = name.split(maxsplit=1)
+    if len(parts) != 2:
+        raise ValueError("Invalid name format")
+    rank, full_name = parts
+    user = db.query(User).filter(User.rank == rank, User.full_name == full_name).first()
     if not user:
         raise ValueError("User not found")
 
@@ -238,7 +256,15 @@ def create_user_record(
 # MA Records
 
 def get_ma_records(name: str):
-    return db.query(MedicalEvent).join(User).filter(User.full_name == name, MedicalEvent.event_type == "MA").all()
+    parts = name.split(maxsplit=1)
+    if len(parts) != 2:
+        return []
+    rank, full_name = parts
+    return db.query(MedicalEvent).join(User).filter(
+        User.rank == rank,
+        User.full_name == full_name,
+        MedicalEvent.event_type == "MA"
+    ).all()
 
 def create_ma_record(
     name: str,
@@ -247,7 +273,11 @@ def create_ma_record(
     appointment_date: str,
     appointment_time: str
 ):
-    user = db.query(User).filter(User.full_name == name).first()
+    parts = name.split(maxsplit=1)
+    if len(parts) != 2:
+        raise ValueError("Invalid name format")
+    rank, full_name = parts
+    user = db.query(User).filter(User.rank == rank, User.full_name == full_name).first()
     if not user:
         raise ValueError("User not found")
 
@@ -293,8 +323,13 @@ def update_ma_record(
 
 # RSI Records
 def get_user_rsi_records(name: str):
+    parts = name.split(maxsplit=1)
+    if len(parts) != 2:
+        return []
+    rank, full_name = parts
     return db.query(MedicalEvent).join(User).filter(
-        User.full_name == name,
+        User.rank == rank,
+        User.full_name == full_name,
         MedicalEvent.event_type == "RSI"
     ).all()
 
@@ -303,18 +338,20 @@ def create_rsi_record(
     symptoms: str,
     diagnosis: str | None = None
 ):
-    user = db.query(User).filter(User.full_name == name).first()
+    parts = name.split(maxsplit=1)
+    if len(parts) != 2:
+        raise ValueError("Invalid name format")
+    rank, full_name = parts
+    user = db.query(User).filter(User.rank == rank, User.full_name == full_name).first()
     if not user:
         raise ValueError("User not found")
 
-    now = datetime.now()
     event = MedicalEvent(
         user_id=user.id,
         event_type="RSI",
         symptoms=symptoms,
         diagnosis=diagnosis or "",
-        event_date=now.date(),
-        event_time=now.time().replace(microsecond=0)
+        event_datetime=now_sg().replace(microsecond=0),
     )
     db.add(event)
     db.commit()
@@ -331,20 +368,25 @@ def update_rsi_record(
 ):
     record = db.query(MedicalEvent).filter(MedicalEvent.id == record_id).first()
     if record:
+        if _has_diagnosis(record.diagnosis):
+            return record
         record.diagnosis = diagnosis
-
-        medical_status = MedicalStatus(
-            user_id=record.user_id,
-            status_type=status_type,
-            description=status,
-            start_date=datetime.strptime(start_date, "%d%m%y").date(),
-            end_date=datetime.strptime(end_date, "%d%m%y").date(),
-            source_event_id=record.id
-        )
-        db.add(medical_status)
-        db.commit()
-        db.refresh(record)
-    return record
+        if status == "N/A":
+            db.commit()
+            db.refresh(record)
+        else:
+            medical_status = MedicalStatus(
+                user_id=record.user_id,
+                status_type=status_type,
+                description=status,
+                start_date=datetime.strptime(start_date, "%d%m%y").date(),
+                end_date=datetime.strptime(end_date, "%d%m%y").date(),
+                source_event_id=record.id
+            )
+            db.add(medical_status)
+            db.commit()
+            db.refresh(record)
+        return record
 
 
 # Other Queries
