@@ -8,6 +8,7 @@ from config.constants import (
     IC_GROUP_CHAT_ID,
     MOVEMENT_TOPIC_ID,
     ADMIN_IDS,
+    PARADE_STATE_TOPIC_ID,
 )
 
 # IMPORTANT: import ONLY the real SFT handler
@@ -40,6 +41,16 @@ async def callback_router(update, context):
         context.user_data["mode"] = "SFT"
         await handle_sft_callbacks(update, context)
         return
+    
+    # ------------------------------
+    # PARADE STATE (always starts with "parade")
+    # ------------------------------
+    
+    if data.startswith("parade"):
+        context.user_data["mode"] = "PARADE_CONFIRM"
+        await handle_parade_callbacks(update, context)
+        return
+
 
     # ------------------------------
     # STATUS/import-user callbacks are handled by pattern handlers
@@ -75,7 +86,8 @@ async def text_input_router(update, context):
     }:
         from bot.rso_handler import manual_input_handler
         await manual_input_handler(update, context)
-    elif mode == "PARADE_STATE":
+        
+    if mode == "PARADE_STATE":
         from bot.parade_state import generate_parade_state
         await generate_parade_state(update, context)
 
@@ -380,3 +392,34 @@ async def movement_text_input(update, context):
         "📋 Preview\n\n" + msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
+
+# ==================================================
+# PARADE STATE CALLBACKS
+# ==================================================
+async def handle_parade_callbacks(update, context):
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    text = context.user_data.get("generated_text")
+
+    thread_id = PARADE_STATE_TOPIC_ID
+    chat_id = IC_GROUP_CHAT_ID
+
+    if not text and not data == "parade|cancel":
+        await query.edit_message_text("Session expired. Please start again.")
+        context.user_data.clear()
+        return
+
+    if data == "parade|send":
+        await context.bot.send_message(
+            chat_id=chat_id,
+            message_thread_id=thread_id,
+            text=text
+        )
+        await query.edit_message_text("✅ Parade state sent.")
+        context.user_data.clear()
+
+    elif data == "parade|cancel":
+        await query.edit_message_text("❌ Parade state cancelled.")
+        context.user_data.clear()
