@@ -104,13 +104,12 @@ class SFTService:
     # ---------- SUMMARY GENERATION ----------
 
     @classmethod
-    def generate_summary(cls, date: str) -> str:
+    def generate_summary(cls, date: str, instructor_name: str, salutation: str) -> str:
         grouped = defaultdict(list)
 
         for s in cls._submissions:
             if s.date != date:
                 continue
-            key = f"{s.activity} @ {s.location}"
             key = f"{s.activity} @ {s.location}" if s.location else s.activity
             grouped[key].append(s)
 
@@ -136,17 +135,30 @@ class SFTService:
             lines.append("Please resolve before generating summary.")
             return "\n".join(lines)
 
-        # ✅ VALID → build summary
-        lines = [f"SFT Summary ({date})"]
+        all_entries = [entry for entries in grouped.values() for entry in entries]
+        earliest = min(entry.start for entry in all_entries)
+        latest = max(entry.end for entry in all_entries)
+
+        lines = [
+            (
+                f"Good Afternoon {salutation} {instructor_name}, below are the cadets "
+                f"participating in SFT for {date} from {earliest}H to {latest}H."
+            ),
+            "",
+            "Submission of names",
+        ]
+
+        counter = 1
 
         for activity, entries in grouped.items():
-            lines.append(f"\n{activity}:")
-            for idx, e in enumerate(entries, 1):
-                lines.append(
-                    f"{idx}. {e.user_name} {e.start}-{e.end}"
-                )
+            for entry in entries:
+                lines.append(f"{counter}. {entry.user_name} {entry.start}-{entry.end}")
+                counter += 1
 
-        return "\n".join(lines)
+            lines.append(activity)
+            lines.append("")
+
+        return "\n".join(lines).rstrip()
 
 
 # =========================

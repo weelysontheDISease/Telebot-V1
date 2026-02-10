@@ -307,7 +307,8 @@ async def handle_movement_callbacks(update, context):
         )
         context.user_data["final_message"] = msg
         keyboard = [[
-            InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm")
+            InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm"),
+            InlineKeyboardButton("❌ Cancel", callback_data="mov:cancel"),
         ]]
         await reply(
             update,
@@ -326,6 +327,11 @@ async def handle_movement_callbacks(update, context):
         if not msg:
             await reply(update, "❌ No movement data found.")
             return
+
+    if data == "mov:cancel":
+        context.user_data.clear()
+        await reply(update, "❌ Movement reporting cancelled.")
+        return
 
     # Send to IC group
     await context.bot.send_message(
@@ -395,7 +401,8 @@ async def movement_text_input(update, context):
     context.user_data["final_message"] = msg
 
     keyboard = [[
-        InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm")
+        InlineKeyboardButton("✅ Confirm & Send", callback_data="mov:confirm"),
+        InlineKeyboardButton("❌ Cancel", callback_data="mov:cancel"),
     ]]
 
     await reply(
