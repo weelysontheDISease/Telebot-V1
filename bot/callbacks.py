@@ -8,8 +8,8 @@ from config.constants import (
     IC_GROUP_CHAT_ID,
     MOVEMENT_TOPIC_ID,
     ADMIN_IDS,
-    LOCATIONS
-    PARADE_STATE_TOPIC_ID,
+    LOCATIONS,
+    PARADE_STATE_TOPIC_ID
 )
 
 # IMPORTANT: import ONLY the real SFT handler
