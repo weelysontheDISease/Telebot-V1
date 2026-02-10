@@ -23,12 +23,11 @@ from bot.helpers import reply
 # ------------ Common Utility Functions ------------ #
 
 def set_mode(context: CallbackContext, mode: str):
-    context.user_data.clear()
     context.user_data["mode"] = mode
 
 
-def make_name_keyboard(prefix: str) -> InlineKeyboardMarkup:
-    names = get_all_cadet_names()
+def make_name_keyboard(context, prefix: str) -> InlineKeyboardMarkup:
+    names = context.user_data.get('all_names', [])
     keyboard = [
         [InlineKeyboardButton(name, callback_data=f"{prefix}|{name}")]
         for name in names
@@ -38,7 +37,7 @@ def make_name_keyboard(prefix: str) -> InlineKeyboardMarkup:
 
 async def prompt_name_selection(update: Update, context: CallbackContext, mode: str, prompt: str, prefix: str):
     set_mode(context, mode)
-    await reply(update, prompt, reply_markup=make_name_keyboard(prefix))
+    await reply(update, prompt, reply_markup=make_name_keyboard(context, prefix))
 
 # ------------ Common Handlers for RSO, RSI and MA ------------ #
 
@@ -107,7 +106,7 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
         context.user_data["appointment_time"] = getattr(latest_record, "appointment_time", "")
         context.user_data["record_id"] = getattr(latest_record, "id", None)
 
-        instructors = get_all_instructor_names()
+        instructors = context.user_data.get('all_instructors', [])
         keyboard = [
             [InlineKeyboardButton(instructor, callback_data=f"instructor|{instructor}")]
             for instructor in instructors
