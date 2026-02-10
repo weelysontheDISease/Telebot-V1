@@ -133,6 +133,8 @@ def register_status_handlers(dispatcher):
         rsi_status_type_handler,
         confirm_rsi_report_handler,
         confirm_rsi_update_handler,
+        continue_reporting_handler,
+        done_reporting_handler,
     )
 
     dispatcher.add_handler(
@@ -174,6 +176,12 @@ def register_status_handlers(dispatcher):
         CallbackQueryHandler(
             confirm_rsi_update_handler, pattern=r"^confirm_rsi_update$"
         )
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(continue_reporting_handler, pattern=r"^continue_reporting\|")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(done_reporting_handler, pattern=r"^done_reporting$")
     )
 
 
