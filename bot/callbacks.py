@@ -75,7 +75,8 @@ async def text_input_router(update, context):
     }:
         from bot.rso_handler import manual_input_handler
         await manual_input_handler(update, context)
-    elif mode == "PARADE_STATE":
+        
+    if mode == "PARADE_STATE":
         from bot.parade_state import generate_parade_state
         await generate_parade_state(update, context)
 
