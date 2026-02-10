@@ -11,6 +11,7 @@ from db.crud import (
     list_users,
     get_all_instructor_names,
     get_user_by_telegram_id,
+    get_big3_userids,
 )
 from services.db_service import SFTService
 from db.import_users_csv import import_users
@@ -181,6 +182,10 @@ async def start_parade_state(update, context):
 	"""Entry point for parade state generation"""
 	context.user_data.clear()
 	context.user_data["mode"] = "PARADE_STATE"
+	
+	if not _is_big3(update.effective_user.id if update.effective_user else None):
+		await reply(update, "❌ You are not authorized to generate parade state.")
+		return
     
 	keyboard = [
         [InlineKeyboardButton("❌ Cancel Generation", callback_data="parade|cancel")]
@@ -201,6 +206,9 @@ async def start_parade_state(update, context):
 def _is_admin(user_id: int | None) -> bool:
     return is_admin_user(user_id)
 
+def _is_big3(user_id: int | None) -> bool:
+    big3_userids = get_big3_userids()
+    return user_id is not None and user_id in big3_userids
 
 async def _handle_import_csv(update, context, clear_first: bool):
     document = update.message.document if update.message else None
