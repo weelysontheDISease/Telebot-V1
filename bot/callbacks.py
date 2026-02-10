@@ -13,8 +13,8 @@ from config.constants import (
 
 # IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
+from services.auth_service import is_admin_user
 from services.auth_service import get_all_admin_user_ids
-from db.crud import get_big3_userids
 from utils.rate_limiter import user_rate_limiter
 
 # ==================================================
@@ -424,11 +424,7 @@ async def movement_text_input(update, context):
 
 
 def _can_send_parade_state(user_id: int | None) -> bool:
-    if is_admin_user(user_id):
-        return True
-
-    big3_userids = get_big3_userids()
-    return user_id is not None and user_id in big3_userids
+    return is_admin_user(user_id)
 
 # ==================================================
 # PARADE STATE CALLBACKS
