@@ -217,7 +217,7 @@ async def handle_pt_admin_callbacks(update, context):
         salutation = data.split("|", 1)[1]
         summary = SFTService.generate_summary(window.date, instructor_name, salutation)
         context.user_data["pending_sft_summary"] = summary
-        context.user_data.pop("pending_sft_instructor", None)
+
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ Confirm & Send", callback_data="ptadmin:send_report")],
@@ -246,6 +246,7 @@ async def handle_pt_admin_callbacks(update, context):
 
         await reply(update, "✅ SFT report sent to IC chat.", reply_markup=_admin_menu_keyboard())
         context.user_data.pop("pending_sft_summary", None)
+        context.user_data.pop("pending_sft_instructor", None)
         return
 
     if data == "ptadmin:menu":

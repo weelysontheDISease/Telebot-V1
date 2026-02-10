@@ -2,6 +2,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional
 
+def _display_instructor_name(instructor_name: str) -> str:
+    parts = instructor_name.split(maxsplit=1)
+    if len(parts) == 2:
+        return parts[1]
+    return instructor_name
+
 
 # =========================
 # DATA MODELS
