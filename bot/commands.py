@@ -126,11 +126,17 @@ async def start_parade_state(update, context):
 	"""Entry point for parade state generation"""
 	context.user_data.clear()
 	context.user_data["mode"] = "PARADE_STATE"
-
+    
+	keyboard = [
+        [InlineKeyboardButton("❌ Cancel Generation", callback_data="parade|cancel")]
+    ]
+	reply_markup = InlineKeyboardMarkup(keyboard)
+    
 	await reply(
 		update,
 		"📋Parade State started.\n\n"
-		"Please input the number of out-of-camp personnel:"
+		"Please input the number of out-of-camp personnel:",
+        reply_markup=reply_markup
 	)
 
 

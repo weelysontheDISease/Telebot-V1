@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from db import crud
-
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 def categorise_medical_events(events):
 	"""Categorise medical events as MA, RSO or RSI"""
@@ -170,9 +170,8 @@ async def generate_parade_state(update, context):
 	else:
 		temp_status_text = ""
 
-
-	others_text = permstatus_text = "" 
-	others_count = permstatus_count = 0
+	others_text = perm_status_text = ""
+	others_count = perm_status_count = 0
 	
 	total_strength = len(all_cadets)
 	out_of_camp = update.message.text.strip()
@@ -196,39 +195,46 @@ OUT OF CAMP: {out_of_camp}
 
 -------------------------------------------------------- 
 
-MA: {ma_count:02d}
-{ma_text.rstrip()}
+MA: {ma_count:02d}{"\n" + ma_text.rstrip() if ma_text else ''}
 
 -------------------------------------------------------- 
 
-RSI : {rsi_count:02d}
-{rsi_text.rstrip()}
+RSI : {rsi_count:02d}{"\n" + rsi_text.rstrip() if rsi_text else ''}
 
-RSO : {rso_count:02d}
-{rso_text.rstrip()}
+RSO : {rso_count:02d}{"\n" + rso_text.rstrip() if rso_text else ''}
 
 -------------------------------------------------------- 
 
-MC: {mc_count:02d}
-{mc_text.rstrip()}
+MC: {mc_count:02d}{"\n" + mc_text.rstrip() if mc_text else ''}
 
 -------------------------------------------------------- 
 
-OTHERS: {others_count:02d}
-{others_text.rstrip()}
+OTHERS: {others_count:02d}{"\n" + others_text.rstrip() if others_text else ''}
 
 --------------------------------------------------------
 
-STATUSES: {temp_status_count:02d}
-{temp_status_text.rstrip()}
+STATUSES: {temp_status_count:02d}{"\n" + temp_status_text.rstrip() if temp_status_text else ''}
 
-PERMANENT STATUS: {permstatus_count:02d}
-{permstatus_text.rstrip()}
+PERMANENT STATUS: {perm_status_count:02d}{"\n" + perm_status_text.rstrip() if perm_status_text else ''}
 """
 	if len(parade_state_text) > 4096:
 		parade_state_text = parade_state_text[:4000] + "\n\n Output truncated: parade_state_text too long."
 
+	context.user_data["generated_text"] = parade_state_text
+	context.user_data["mode"] = "PARADE_CONFIRM"
+
+	keyboard = [
+		[
+			InlineKeyboardButton("📤 Send", callback_data="parade|send"),
+			InlineKeyboardButton("❌ Cancel", callback_data="parade|cancel")
+		]
+	]
+
+	reply_markup = InlineKeyboardMarkup(keyboard)
+
 	await context.bot.send_message(
 		chat_id=update.effective_chat.id, 
-		text=parade_state_text
+		message_thread_id=update.effective_message.message_thread_id,
+    	text=f"{parade_state_text}",
+		reply_markup=reply_markup
 	)
