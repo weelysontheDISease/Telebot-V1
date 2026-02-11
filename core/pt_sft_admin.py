@@ -5,9 +5,12 @@ import pytz
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot.helpers import reply
-from config.constants import ADMIN_IDS, IC_GROUP_CHAT_ID, SFT_TOPIC_ID
+from config.constants import IC_GROUP_CHAT_ID, SFT_TOPIC_ID
 from db.crud import get_all_instructor_names
 from services.db_service import SFTService, set_sft_window
+from services.auth_service import is_admin_user
+from utils.rate_limiter import user_rate_limiter
+
 
 SG_TZ = pytz.timezone("Asia/Singapore")
 
@@ -59,8 +62,13 @@ async def _show_admin_menu(update, context):
 # ENTRY POINT
 # =========================
 async def start_pt_admin(update, context):
-    if update.effective_user.id not in ADMIN_IDS:
+    if not is_admin_user(update.effective_user.id if update.effective_user else None):
         await reply(update, "❌ You are not authorised.")
+        return
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_rate_limiter.allow(user_id, "start_pt_admin", max_requests=5, window_seconds=30):
+        await reply(update, "⏳ Too many requests. Please wait a bit before accessing the PT Admin panel again.")
         return
 
     context.user_data.clear()
@@ -71,7 +79,7 @@ async def start_pt_admin(update, context):
 # CALLBACK HANDLER
 # =========================
 async def handle_pt_admin_callbacks(update, context):
-    if update.effective_user.id not in ADMIN_IDS:
+    if not is_admin_user(update.effective_user.id if update.effective_user else None):
         await reply(update, "❌ You are not authorised.")
         return
 

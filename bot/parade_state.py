@@ -185,39 +185,47 @@ async def generate_parade_state(update, context):
 		return
 	current_strength = total_strength - out_of_camp
 	
+	ma_section = "\n" + ma_text.rstrip() if ma_text else ""
+	rsi_section = "\n" + rsi_text.rstrip() if rsi_text else ""
+	rso_section = "\n" + rso_text.rstrip() if rso_text else ""
+	mc_section = "\n" + mc_text.rstrip() if mc_text else ""
+	others_section = "\n" + others_text.rstrip() if others_text else ""
+	statuses_section = "\n" + temp_status_text.rstrip() if temp_status_text else ""
+	perm_status_section = "\n" + perm_status_text.rstrip() if perm_status_text else ""
+
 	parade_state_text = f"""
-DIS WING 14/26 PRE-MDST PARADE STATE {current_date.strftime('%d%m%y')}, {current_time.strftime('%H%M')}H
--------------------------------------------------------- 
+	DIS WING 14/26 PRE-MDST PARADE STATE {current_date.strftime('%d%m%y')}, {current_time.strftime('%H%M')}H
+	-------------------------------------------------------- 
 
-TOTAL STRENGTH: {total_strength}
+	TOTAL STRENGTH: {total_strength}
 
-CURRENT STRENGTH: {current_strength}
-OUT OF CAMP: {out_of_camp}
+	CURRENT STRENGTH: {current_strength}
+	OUT OF CAMP: {out_of_camp}
 
--------------------------------------------------------- 
+	-------------------------------------------------------- 
 
-MA: {ma_count:02d}{"\n" + ma_text.rstrip() if ma_text else ''}
+	MA: {ma_count:02d}{ma_section}
 
--------------------------------------------------------- 
+	-------------------------------------------------------- 
 
-RSI : {rsi_count:02d}{"\n" + rsi_text.rstrip() if rsi_text else ''}
+	RSI : {rsi_count:02d}{rsi_section}
 
-RSO : {rso_count:02d}{"\n" + rso_text.rstrip() if rso_text else ''}
+	RSO : {rso_count:02d}{rso_section}
 
--------------------------------------------------------- 
+	-------------------------------------------------------- 
 
-MC: {mc_count:02d}{"\n" + mc_text.rstrip() if mc_text else ''}
+	MC: {mc_count:02d}{mc_section}
 
--------------------------------------------------------- 
+	-------------------------------------------------------- 
 
-OTHERS: {others_count:02d}{"\n" + others_text.rstrip() if others_text else ''}
+	OTHERS: {others_count:02d}{others_section}
 
---------------------------------------------------------
+	--------------------------------------------------------
 
-STATUSES: {temp_status_count:02d}{"\n" + temp_status_text.rstrip() if temp_status_text else ''}
+	STATUSES: {temp_status_count:02d}{statuses_section}
 
-PERMANENT STATUS: {perm_status_count:02d}{"\n" + perm_status_text.rstrip() if perm_status_text else ''}
-"""
+	PERMANENT STATUS: {perm_status_count:02d}{perm_status_section}
+	"""
 	if len(parade_state_text) > 4096:
 		parade_state_text = parade_state_text[:4000] + "\n\n Output truncated: parade_state_text too long."
 

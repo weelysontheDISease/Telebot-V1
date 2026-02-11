@@ -14,6 +14,47 @@ db = SessionLocal()
 def get_user_by_telegram_id(telegram_id: int):
     return db.query(User).filter(User.telegram_id == telegram_id).first()
 
+def get_admin_telegram_ids() -> list[int]:
+    session = SessionLocal()
+    try:
+        rows = session.query(User.telegram_id).filter(
+            User.is_admin.is_(True),
+            User.is_active.is_(True),
+            User.telegram_id.isnot(None),
+        ).all()
+        return [row[0] for row in rows]
+    finally:
+        session.close()
+
+
+def get_admin_telegram_ids() -> list[int]:
+    session = SessionLocal()
+    try:
+        rows = session.query(User.telegram_id).filter(
+            User.is_admin.is_(True),
+            User.is_active.is_(True),
+            User.telegram_id.isnot(None),
+        ).all()
+        return [row[0] for row in rows]
+    finally:
+        session.close()
+
+def is_admin_user(user_id: int | None) -> bool:
+    if user_id is None:
+        return False
+
+    if user_id in ADMIN_IDS:
+        return True
+
+    user = get_user_by_telegram_id(user_id)
+    return bool(user and user.is_admin and user.is_active)
+
+
+def get_all_admin_user_ids() -> list[int]:
+    return sorted(set(ADMIN_IDS) | set(get_admin_telegram_ids()))
+
+
+
 def _normalize_username(value: str | None):
     if value is None:
         return None
@@ -407,9 +448,3 @@ def get_all_instructors():
     return db.query(User).filter(
         User.role == "instructor"
     ).all()
-
-def get_big3_userids():
-    results = db.query(User.telegram_id).filter(
-        User.role == "Big3"
-    ).all()
-    return [r[0] for r in results] # Flattens the tuples into a simple list

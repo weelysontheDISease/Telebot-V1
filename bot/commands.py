@@ -3,18 +3,19 @@ import os
 import tempfile
 
 from bot.helpers import reply, parade_state_cancel_button
-from config.constants import ACTIVITIES, ADMIN_IDS
+from config.constants import ACTIVITIES, MAX_IMPORT_CSV_SIZE_BYTES
 from services.db_service import get_sft_window
 from db.crud import (
     clear_user_data,
     get_all_cadet_names,
     list_users,
     get_all_instructor_names,
-    get_user_by_telegram_id,
-    get_big3_userids,
+    get_user_by_telegram_id
 )
 from services.db_service import SFTService
 from db.import_users_csv import import_users
+from services.auth_service import is_admin_user
+from utils.rate_limiter import user_rate_limiter
 
 # =========================
 # START ENTRY POINT
@@ -182,11 +183,12 @@ async def start_parade_state(update, context):
 	context.user_data.clear()
 	context.user_data["mode"] = "PARADE_STATE"
 	
-	# if not _is_big3(update.effective_user.id if update.effective_user else None):
-	# 	await reply(update, "❌ You are not authorized to generate parade state.")
-	# 	return
+	user_id = update.effective_user.id if update.effective_user else None
+	if not _is_admin(user_id):
+		await reply(update, "❌ You are not authorized to generate parade state.")
+		return
     
-	await reply(
+    await reply(
 		update,
 		"📋Parade State started.\n\n"
 		"Please input the number of out-of-camp personnel:",
@@ -198,11 +200,7 @@ async def start_parade_state(update, context):
 # USER IMPORT (CSV)
 # =========================
 def _is_admin(user_id: int | None) -> bool:
-    return user_id is not None and user_id in ADMIN_IDS
-
-def _is_big3(user_id: int | None) -> bool:
-    big3_userids = get_big3_userids()
-    return user_id is not None and user_id in big3_userids
+    return is_admin_user(user_id)
 
 async def _handle_import_csv(update, context, clear_first: bool):
     document = update.message.document if update.message else None
@@ -252,10 +250,15 @@ async def _handle_import_csv(update, context, clear_first: bool):
 
 
 async def import_user(update, context):
-    if not _is_admin(update.effective_user.id if update.effective_user else None):
+    user_id = update.effective_user.id if update.effective_user else None
+    if not _is_admin(user_id):
         await reply(update, "❌ You are not authorized to use /import_user.")
         return
 
+    if not user_rate_limiter.allow(user_id, "import_user_cmd", max_requests=4, window_seconds=30):
+        await reply(update, "⏳ Too many requests. Please wait a bit before using /import_user again.")
+        return
+    
     context.user_data.clear()
     keyboard = [
         [InlineKeyboardButton("📥 Import users (CSV)", callback_data="import_user|import")],
@@ -272,8 +275,19 @@ async def import_user(update, context):
 async def import_user_document(update, context):
     if context.user_data.get("mode") != "IMPORT_USER":
         return
-    if not _is_admin(update.effective_user.id if update.effective_user else None):
+    user_id = update.effective_user.id if update.effective_user else None
+    if not _is_admin(user_id):
         await reply(update, "❌ You are not authorized to import users.")
+        return
+
+    if not user_rate_limiter.allow(user_id, "import_user_document", max_requests=3, window_seconds=60):
+        await reply(update, "⏳ Too many import attempts. Please wait 1 minute and try again.")
+        return
+
+    document = update.message.document if update.message else None
+    if document and document.file_size and document.file_size > MAX_IMPORT_CSV_SIZE_BYTES:
+        max_size_mb = MAX_IMPORT_CSV_SIZE_BYTES // (1024 * 1024)
+        await reply(update, f"❌ File too large. Maximum allowed size is {max_size_mb} MB.")
         return
 
     clear_first = bool(context.user_data.get("import_clear"))

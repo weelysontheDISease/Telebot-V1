@@ -7,14 +7,15 @@ from utils.time_utils import is_valid_24h_time, now_hhmm
 from config.constants import (
     IC_GROUP_CHAT_ID,
     MOVEMENT_TOPIC_ID,
-    ADMIN_IDS,
     LOCATIONS,
     PARADE_STATE_TOPIC_ID
 )
 
 # IMPORTANT: import ONLY the real SFT handler
 from core.sft_manager import handle_sft_callbacks
-
+from services.auth_service import is_admin_user
+from services.auth_service import get_all_admin_user_ids
+from utils.rate_limiter import user_rate_limiter
 
 # ==================================================
 # CALLBACK ROUTER
@@ -27,6 +28,11 @@ async def callback_router(update, context):
     query = update.callback_query
     data = query.data
 
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_rate_limiter.allow(user_id, "callback_router", max_requests=25, window_seconds=10):
+        await query.answer("Too many requests. Please slow down.", show_alert=False)
+        return
+    
     # ------------------------------
     # MOVEMENT (always starts with "mov")
     # ------------------------------
@@ -75,6 +81,11 @@ async def text_input_router(update, context):
     """
     Routes free-text input based on mode.
     """
+    user_id = update.effective_user.id if update.effective_user else None
+    if not user_rate_limiter.allow(user_id, "text_input_router", max_requests=12, window_seconds=15):
+        await reply(update, "⏳ Too many messages in a short time. Please slow down.")
+        return
+    
     mode = context.user_data.get("mode")
 
     if mode == "MOVEMENT":
@@ -341,7 +352,7 @@ async def handle_movement_callbacks(update, context):
     )
 
     # Notify admins
-    for admin in ADMIN_IDS:
+    for admin in get_all_admin_user_ids():
         await context.bot.send_message(
             chat_id=admin,
             text="Movement report sent:\n\n" + msg,
@@ -411,6 +422,10 @@ async def movement_text_input(update, context):
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
+
+def _can_send_parade_state(user_id: int | None) -> bool:
+    return is_admin_user(user_id)
+
 # ==================================================
 # PARADE STATE CALLBACKS
 # ==================================================
@@ -418,6 +433,12 @@ async def handle_parade_callbacks(update, context):
     query = update.callback_query
     await query.answer()
 
+    user_id = update.effective_user.id if update.effective_user else None
+    if not _can_send_parade_state(user_id):
+        await query.edit_message_text("❌ You are not authorized to send parade state.")
+        context.user_data.clear()
+        return
+    
     data = query.data
     text = context.user_data.get("generated_text")
 
