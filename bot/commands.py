@@ -187,12 +187,12 @@ async def start_parade_state(update, context):
 	if not _is_admin(user_id):
 		await reply(update, "❌ You are not authorized to generate parade state.")
 		return
-    
-    await reply(
+	
+	await reply(
 		update,
 		"📋Parade State started.\n\n"
 		"Please input the number of out-of-camp personnel:",
-        reply_markup=parade_state_cancel_button()
+		reply_markup=parade_state_cancel_button()
 	)
 
 
