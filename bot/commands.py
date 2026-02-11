@@ -2,7 +2,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import os
 import tempfile
 
-from bot.helpers import reply
+from bot.helpers import reply, parade_state_cancel_button
 from config.constants import ACTIVITIES, ADMIN_IDS
 from services.db_service import get_sft_window
 from db.crud import (
@@ -182,20 +182,15 @@ async def start_parade_state(update, context):
 	context.user_data.clear()
 	context.user_data["mode"] = "PARADE_STATE"
 	
-	if not _is_big3(update.effective_user.id if update.effective_user else None):
-		await reply(update, "❌ You are not authorized to generate parade state.")
-		return
-    
-	keyboard = [
-        [InlineKeyboardButton("❌ Cancel Generation", callback_data="parade|cancel")]
-    ]
-	reply_markup = InlineKeyboardMarkup(keyboard)
+	# if not _is_big3(update.effective_user.id if update.effective_user else None):
+	# 	await reply(update, "❌ You are not authorized to generate parade state.")
+	# 	return
     
 	await reply(
 		update,
 		"📋Parade State started.\n\n"
 		"Please input the number of out-of-camp personnel:",
-        reply_markup=reply_markup
+        reply_markup=parade_state_cancel_button()
 	)
 
 
