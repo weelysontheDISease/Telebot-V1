@@ -48,7 +48,7 @@ async def callback_router(update, context):
         context.user_data["mode"] = "SFT"
         await handle_sft_callbacks(update, context)
         return
-    
+
     # ------------------------------
     # PT ADMIN
     # ------------------------------
@@ -57,11 +57,11 @@ async def callback_router(update, context):
         from core.pt_sft_admin import handle_pt_admin_callbacks
         await handle_pt_admin_callbacks(update, context)
         return
-    
+
     # ------------------------------
     # PARADE STATE (always starts with "parade")
     # ------------------------------
-    
+
     if data.startswith("parade"):
         context.user_data["mode"] = "PARADE_CONFIRM"
         await handle_parade_callbacks(update, context)
@@ -95,7 +95,7 @@ async def text_input_router(update, context):
     if mode == "PT_ADMIN":
         from core.pt_sft_admin import handle_pt_admin_text
         await handle_pt_admin_text(update, context)
-    
+
     if mode in {
         "report",
         "update",
@@ -106,7 +106,7 @@ async def text_input_router(update, context):
     }:
         from bot.rso_handler import manual_input_handler
         await manual_input_handler(update, context)
-        
+
     if mode == "PARADE_STATE":
         from bot.parade_state import generate_parade_state
         await generate_parade_state(update, context)
@@ -160,6 +160,7 @@ def register_status_handlers(dispatcher):
         cancel,
         mc_days_button_handler,
         confirm_ma_handler,
+        confirm_ma_update_handler,
         instructor_selection_handler,
         rsi_days_button_handler,
         rsi_status_type_handler,
@@ -167,6 +168,8 @@ def register_status_handlers(dispatcher):
         confirm_rsi_update_handler,
         continue_reporting_handler,
         done_reporting_handler,
+        send_batch_to_ic_handler,
+        cancel_batch_send_handler,
     )
 
     dispatcher.add_handler(
@@ -189,6 +192,9 @@ def register_status_handlers(dispatcher):
     )
     dispatcher.add_handler(
         CallbackQueryHandler(confirm_ma_handler, pattern=r"^confirm_ma$")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(confirm_ma_update_handler, pattern=r"^confirm_ma_update$")
     )
     dispatcher.add_handler(
         CallbackQueryHandler(instructor_selection_handler, pattern=r"^instructor\|")
@@ -214,6 +220,12 @@ def register_status_handlers(dispatcher):
     )
     dispatcher.add_handler(
         CallbackQueryHandler(done_reporting_handler, pattern=r"^done_reporting$")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(send_batch_to_ic_handler, pattern=r"^send_batch_ic$")
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(cancel_batch_send_handler, pattern=r"^cancel_batch_send$")
     )
 
 
