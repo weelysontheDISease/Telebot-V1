@@ -2,7 +2,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 import os
 import tempfile
 
-from bot.helpers import reply
+from bot.helpers import reply, parade_state_cancel_button
 from config.constants import ACTIVITIES, MAX_IMPORT_CSV_SIZE_BYTES
 from services.db_service import get_sft_window
 from db.crud import (
@@ -179,25 +179,20 @@ async def start_status(update, context):
 # PARADE STATE ENTRY POINT
 # =========================
 async def start_parade_state(update, context):
-    """Entry point for parade state generation"""
-    context.user_data.clear()
-    context.user_data["mode"] = "PARADE_STATE"
-
-    user_id = update.effective_user.id if update.effective_user else None
-    if not _is_admin(user_id):
-        await reply(update, "❌ You are not authorized to generate parade state.")
-        return
-
-    keyboard = [
-        [InlineKeyboardButton("❌ Cancel Generation", callback_data="parade|cancel")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await reply(
-        update,
-        "📋Parade State started.\n\n"
-        "Please input the number of out-of-camp personnel:",
-        reply_markup=reply_markup
+	"""Entry point for parade state generation"""
+	context.user_data.clear()
+	context.user_data["mode"] = "PARADE_STATE"
+	
+	user_id = update.effective_user.id if update.effective_user else None
+	if not _is_admin(user_id):
+		await reply(update, "❌ You are not authorized to generate parade state.")
+		return
+	
+	await reply(
+		update,
+		"📋Parade State started.\n\n"
+		"Please input the number of out-of-camp personnel:",
+		reply_markup=parade_state_cancel_button()
 	)
 
 
