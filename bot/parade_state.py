@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from db import crud
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from bot.helpers import parade_state_cancel_button
 
 def categorise_medical_events(events):
 	"""Categorise medical events as MA, RSO or RSI"""
@@ -176,11 +177,11 @@ async def generate_parade_state(update, context):
 	total_strength = len(all_cadets)
 	out_of_camp = update.message.text.strip()
 	if not out_of_camp.isdigit():
-		await update.message.reply_text("❌ Only digits are allowed.\n\nPlease input the number of out-of-camp personnel:")
+		await update.message.reply_text("❌ Only digits are allowed.\n\nPlease input the number of out-of-camp personnel:", reply_markup=parade_state_cancel_button())
 		return
 	out_of_camp = int(out_of_camp)
 	if out_of_camp > total_strength:
-		await update.message.reply_text("❌ Number of personnel cannot be greater than total strength.\n\nPlease input the number of out-of-camp personnel:")
+		await update.message.reply_text("❌ Number of personnel cannot be greater than total strength.\n\nPlease input the number of out-of-camp personnel:", reply_markup=parade_state_cancel_button())
 		return
 	current_strength = total_strength - out_of_camp
 	

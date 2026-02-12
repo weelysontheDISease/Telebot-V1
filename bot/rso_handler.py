@@ -20,6 +20,8 @@ from db.crud import (
 
 from bot.helpers import reply
 
+from config.constants import IC_GROUP_CHAT_ID, PARADE_STATE_TOPIC_ID, CADET_CHAT_ID
+
 # ------------ Common Utility Functions ------------ #
 
 def set_mode(context: CallbackContext, mode: str):
@@ -40,6 +42,24 @@ def reset_entry_state(context: CallbackContext):
 def add_pending_report(context: CallbackContext, report: dict):
     pending = context.user_data.setdefault("pending_reports", [])
     pending.append(report)
+
+
+def cadet_already_in_batch(context: CallbackContext, name: str, mode: str) -> bool:
+    """Check if a cadet with the same name is already in the batch for new reports."""
+    # Only check for new reports (report and rsi_report), not updates
+    if mode not in ["report", "rsi_report"]:
+        return False
+
+    pending = context.user_data.get("pending_reports", [])
+    for report in pending:
+        # Check if same cadet already reported in the same mode (or compatible modes)
+        report_name = report.get("name", "")
+        report_mode = report.get("mode", "")
+        # For RSO: check "report" mode; for RSI: check "rsi_report" mode
+        if report_name and report_name.lower() == name.lower():
+            if (mode == "report" and report_mode == "report") or (mode == "rsi_report" and report_mode == "rsi_report"):
+                return True
+    return False
 
 
 def has_nonempty_value(value: str | None) -> bool:
@@ -124,6 +144,21 @@ async def prompt_name_selection(update: Update, context: CallbackContext, mode: 
     set_mode(context, mode)
     await reply(update, prompt, reply_markup=make_name_keyboard(context, prefix))
 
+
+async def send_to_ic_group(update: Update, context: CallbackContext, message: str):
+    await context.bot.send_message(
+        chat_id=IC_GROUP_CHAT_ID,
+        text=message,
+        message_thread_id=PARADE_STATE_TOPIC_ID,
+    )
+
+async def send_to_cadet_chat(update: Update, context: CallbackContext, message: str):
+    await context.bot.send_message(
+        chat_id=CADET_CHAT_ID,
+        text=message,
+    )
+
+
 # ------------ Common Handlers for RSO, RSI and MA ------------ #
 
 async def name_selection_handler(update: Update, context: CallbackContext):  # manual input for symptoms
@@ -132,6 +167,11 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
     key, name = query.data.split("|", 1)
 
     if key == "name" and context.user_data.get("mode") == "report":
+        # Check for duplicate cadets in batch for new RSO reports
+        if cadet_already_in_batch(context, name, "report"):
+            await reply(update, f"{name} is already in this batch. Cannot report the same cadet twice.")
+            return
+
         context.user_data["name"] = name
         context.user_data["symptoms"] = ""
         context.user_data["awaiting_symptoms"] = True
@@ -148,6 +188,11 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
         return
 
     if key == "rsi_name":
+        # Check for duplicate cadets in batch for new RSI reports
+        if cadet_already_in_batch(context, name, "rsi_report"):
+            await reply(update, f"{name} is already in this batch. Cannot report the same cadet twice.")
+            return
+
         context.user_data["name"] = name
         context.user_data["symptoms"] = ""
         context.user_data["awaiting_rsi_symptoms"] = True
@@ -163,7 +208,7 @@ async def name_selection_handler(update: Update, context: CallbackContext):  # m
         if not records:
             await reply(
                 update,
-                f"No existing report found for {name}. Please use /report_rso to create a new report."
+                f"No existing report found for {name}. Please use /start_status to create a new report."
             )
             context.user_data.clear()
             return
@@ -650,13 +695,45 @@ async def done_reporting_handler(update: Update, context: CallbackContext):
         await reply(update, "All done! Use /start_status to report again.")
         return
 
-    summary = format_pending_reports(reports,mode)
-    persist_pending_reports(reports)
+    summary = format_pending_reports(reports, mode)
     context.user_data.clear()
+    context.user_data["last_batch_summary"] = summary
+    context.user_data["last_batch_reports"] = reports
+    keyboard = [
+        [InlineKeyboardButton("📤 Send to IC Group", callback_data="send_batch_ic")],
+        [InlineKeyboardButton("Cancel", callback_data="cancel_batch_send")],
+    ]
     await reply(
         update,
-        summary
+        summary,
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
+
+
+async def send_batch_to_ic_handler(update: Update, context: CallbackContext):
+    """Send the last completed batch summary to IC group chat."""
+    query = update.callback_query
+    await query.answer()
+
+    summary = context.user_data.get("last_batch_summary")
+    reports = context.user_data.get("last_batch_reports")
+    if not summary or not reports:
+        await reply(update, "No batch summary found to send.")
+        return
+
+
+    persist_pending_reports(reports)
+    await send_to_ic_group(update, context, summary)
+    context.user_data.clear()
+    await reply(update, "✅ Sent to IC group.")
+
+
+async def cancel_batch_send_handler(update: Update, context: CallbackContext):
+    """Cancel sending the last completed batch summary."""
+    query = update.callback_query
+    await query.answer()
+    context.user_data.clear()
+    await reply(update, "Cancelled. Batch not sent to IC group.")
 
 
 # def report_rso_command(update: Update, context: CallbackContext):
@@ -670,7 +747,7 @@ async def done_reporting_handler(update: Update, context: CallbackContext):
 # def start_command(update: Update, context: CallbackContext):
 #     reply(
 #         update,
-#         "Welcome. Use /report_rso to submit a RSO report or /update_rso to update RSO report.\nUse /report_ma to submit an MA report or /update_ma to update MA endorsement.\nUse /report_rsi to submit an RSI report or /update_rsi to update RSI status."
+#         "Welcome. Use /start_status to submit a RSO report or /update_status to update RSO report.\nUse /report_ma to submit an MA report or /update_ma to update MA endorsement.\nUse /report_rsi to submit an RSI report or /update_rsi to update RSI status."
 #     )
 
 # ------------ MA Handlers and Functions ------------ #
@@ -725,6 +802,16 @@ async def confirm_ma_handler(update: Update, context: CallbackContext):
         appointment_time=appointment_time
     )
 
+    # Format and send to CBC
+    summary = f"MA\n"
+    summary += f"{name}\n"
+    summary += f"NAME: {appointment}\n"
+    summary += f"LOCATION: {appointment_location}\n"
+    summary += f"DATE: {appointment_date}\n"
+    summary += f"TIME OF APPOINTMENT: {appointment_time}H\n"
+
+    await send_to_cadet_chat(update, context, summary)
+
     await reply(
         update,
         "MA Report saved. Thank you!"
@@ -743,21 +830,7 @@ async def instructor_selection_handler(update: Update, context: CallbackContext)
     key, instructor = query.data.split("|")
     if key == "instructor":
         context.user_data['instructor'] = instructor
-        # Proceed to next step, e.g., ask for symptoms
-        await reply(
-            update,
-            f"Instructor selected: {instructor}.\n\n"
-        )
         await show_ma_update_summary(update, context)
-        update_ma_record(
-            record_id=context.user_data.get('record_id'),
-            appointment=context.user_data.get('appointment', 'N/A'),
-            appointment_location=context.user_data.get('appointment_location', 'N/A'),
-            appointment_date=context.user_data.get('appointment_date', 'N/A'),
-            appointment_time=context.user_data.get('appointment_time', 'N/A'),
-            instructor=context.user_data.get('instructor', 'N/A')
-        )
-
         return
 
 async def show_ma_update_summary(update: Update, context: CallbackContext):
@@ -775,11 +848,58 @@ async def show_ma_update_summary(update: Update, context: CallbackContext):
     summary += f"TIME OF APPOINTMENT: {appointment_time}H\n"
     summary += f"ENDORSED BY: {instructor}\n"
 
+    keyboard = [
+        [
+            InlineKeyboardButton("Confirm", callback_data="confirm_ma_update"),
+            InlineKeyboardButton("Cancel", callback_data="cancel")
+        ]
+    ]
     await reply(
         update,
-        summary
+        summary,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
     return
+
+async def confirm_ma_update_handler(update: Update, context: CallbackContext):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    name = context.user_data.get('name', 'N/A')
+    appointment = context.user_data.get('appointment', 'N/A')
+    appointment_location = context.user_data.get('appointment_location', 'N/A')
+    appointment_date = context.user_data.get('appointment_date', 'N/A')
+    appointment_time = context.user_data.get('appointment_time', 'N/A')
+    instructor = context.user_data.get('instructor', 'N/A')
+
+    # Update MA record in database
+    update_ma_record(
+        record_id=context.user_data.get('record_id'),
+        appointment=appointment,
+        appointment_location=appointment_location,
+        appointment_date=appointment_date,
+        appointment_time=appointment_time,
+        instructor=instructor
+    )
+
+    # Format and send to parade state IC group
+    summary = f"MA\n"
+    summary += f"{name}\n"
+    summary += f"NAME: {appointment}\n"
+    summary += f"LOCATION: {appointment_location}\n"
+    summary += f"DATE: {appointment_date}\n"
+    summary += f"TIME OF APPOINTMENT: {appointment_time}H\n"
+    summary += f"ENDORSED BY: {instructor}\n"
+
+    await send_to_ic_group(update, context, summary)
+
+    await reply(
+        update,
+        "MA endorsement updated and sent. Thank you!"
+    )
+    context.user_data.clear()
 
 # def report_ma_command(update: Update, context: CallbackContext):
 #     start_ma_report(update, context)
@@ -820,7 +940,7 @@ async def rsi_days_button_handler(update: Update, context: CallbackContext):
 
     days_int = int(days)
     context.user_data["number_of_days"] = days_int
-    
+
     # If no status given, skip status type selection
     if days_int == 0:
         context.user_data["status_type"] = "N/A"
@@ -849,12 +969,17 @@ async def rsi_status_type_handler(update: Update, context: CallbackContext):
     _, status_type = query.data.split("|")
     days = context.user_data.get("number_of_days", 1)
 
+    if status_type == 'LD':
+        status_full = "LIGHT DUTY"
+    else:
+        status_full = status_type
+
     if days == 1:
-        status = f"1 DAY {status_type}"
+        status = f"1 DAY {status_full}"
     elif days == 0:
         status = "N/A"
     else:
-        status = f"{days} DAYS {status_type}"
+        status = f"{days} DAYS {status_full}"
 
     if status == "N/A":
         start_date = ""
@@ -941,6 +1066,10 @@ async def confirm_rsi_update_handler(update: Update, context: CallbackContext):
     status = context.user_data.get("status", "")
     start_date = context.user_data.get("start_date", "")
     end_date = context.user_data.get("end_date", "")
+
+    # Append dates to status for consistent formatting (like RSO)
+    if status and start_date and end_date:
+        status += f" ({start_date}-{end_date})"
 
     if pending_update_exists(context, record_id, {"rsi_update"}):
         await reply(update, "This update is already queued in the current batch.")
