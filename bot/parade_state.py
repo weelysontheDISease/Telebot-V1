@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from db import crud
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.helpers import parade_state_cancel_button
@@ -122,7 +123,9 @@ def count_temp_statuses(temp_statuses):
 async def generate_parade_state(update, context):
 	"""Generates the current parade state"""
 
-	current_datetime = datetime.now()
+	tz_singapore = ZoneInfo("Asia/Singapore")
+
+	current_datetime = datetime.now(tz_singapore)
 	current_time = current_datetime.time()
 	current_date = current_datetime.date()
 
