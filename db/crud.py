@@ -12,7 +12,11 @@ db = SessionLocal()
 db = SessionLocal()
 
 def get_user_by_telegram_id(telegram_id: int):
-    return db.query(User).filter(User.telegram_id == telegram_id).first()
+    session = SessionLocal()
+    try:
+        return session.query(User).filter(User.telegram_id == telegram_id).first()
+    finally:
+        session.close()
 
 def get_admin_telegram_ids() -> list[int]:
     session = SessionLocal()

@@ -12,7 +12,7 @@ ALLOWED_RANKS = {
     # Specialists/Enlistees
     "REC", "PTE", "LCP", "CPL", "CFC", "3SG", "2SG", "1SG", "SSG", "MSG",
     # Military Experts (adjust to your unit's official list)
-    "ME1", "ME2", "ME3", "ME4", "ME4T", "ME5", "ME6", "ME7", "ME8",
+    "ME1", "ME2", "ME3", "ME4", "ME4A", "ME4T", "ME5", "ME6", "ME7", "ME8",
 }
 
 ROLE_MAP = {

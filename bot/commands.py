@@ -310,9 +310,12 @@ async def import_user_callback(update, context):
     if action == "import":
         context.user_data.clear()
         context.user_data["mode"] = "IMPORT_USER"
-        context.user_data["import_clear"] = False
-        await reply(update, "📥 Send the CSV file to import users.")
-        return
+        context.user_data["import_clear"] = True
+        await reply(
+            update,
+            "📥 Send the CSV file to import users. "
+            "Current users and medical records will be cleared before import.",
+        )
 
     if action == "list":
         users = list_users()
@@ -330,25 +333,13 @@ async def import_user_callback(update, context):
         return
 
     if action == "clear":
-        keyboard = [
-            [InlineKeyboardButton("✅ Confirm clear", callback_data="import_user|confirm_clear")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="import_user|cancel")],
-        ]
+        context.user_data.clear()
+        context.user_data["mode"] = "IMPORT_USER"
+        context.user_data["import_clear"] = True
         await reply(
             update,
-            "This will delete all users and medical records. Are you sure?",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-        return
-
-    if action == "confirm_clear":
-        cleared = clear_user_data()
-        await reply(
-            update,
-            "🧹 Cleared existing data: "
-            f"{cleared['users']} users, "
-            f"{cleared['medical_events']} medical events, "
-            f"{cleared['medical_statuses']} medical statuses.",
+            "🧹 Clear-and-import mode enabled. Send the CSV file now. "
+            "Existing users and medical records will be cleared right before import.",
         )
         return
 
