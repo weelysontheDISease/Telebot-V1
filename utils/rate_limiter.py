@@ -1,8 +1,6 @@
 import time
 
-
 class UserRateLimiter:
-    """Simple in-memory, per-user sliding window limiter."""
 
     def __init__(self):
         self._events: dict[tuple[int, str], list[float]] = {}
@@ -24,6 +22,5 @@ class UserRateLimiter:
         timestamps.append(now)
         self._events[key] = timestamps
         return True
-
 
 user_rate_limiter = UserRateLimiter()

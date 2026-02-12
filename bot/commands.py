@@ -310,9 +310,12 @@ async def import_user_callback(update, context):
     if action == "import":
         context.user_data.clear()
         context.user_data["mode"] = "IMPORT_USER"
-        context.user_data["import_clear"] = False
-        await reply(update, "📥 Send the CSV file to import users.")
-        return
+        context.user_data["import_clear"] = True
+        await reply(
+            update,
+            "📥 Send the CSV file to import users. "
+            "Current users and medical records will be cleared before import.",
+        )
 
     if action == "list":
         users = list_users()
